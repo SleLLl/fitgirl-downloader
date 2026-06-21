@@ -1,3 +1,4 @@
+use std::io;
 use std::path::{Path, PathBuf};
 
 /// Browser-like User-Agent; direct links 200 with just this (no cookies).
@@ -48,6 +49,19 @@ pub fn temp_path(dest: &Path, k: usize) -> PathBuf {
     PathBuf::from(format!("{}.part{}", dest.to_string_lossy(), k))
 }
 
+/// Concatenate `parts` in order into `dest`, returning total bytes written.
+pub fn assemble(parts: &[PathBuf], dest: &Path) -> io::Result<u64> {
+    let mut out = std::fs::File::create(dest)?;
+    let mut total = 0u64;
+    for p in parts {
+        let mut f = std::fs::File::open(p)?;
+        total += io::copy(&mut f, &mut out)?;
+    }
+    use std::io::Write;
+    out.flush()?;
+    Ok(total)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -84,5 +98,20 @@ mod tests {
             temp_path(Path::new("/d/game.rar"), 2),
             PathBuf::from("/d/game.rar.part2")
         );
+    }
+
+    #[test]
+    fn assembles_parts_in_order() {
+        let dir = std::env::temp_dir().join(format!("ffdl_test_{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let p0 = dir.join("a.part0");
+        let p1 = dir.join("a.part1");
+        std::fs::write(&p0, b"hello ").unwrap();
+        std::fs::write(&p1, b"world").unwrap();
+        let dest = dir.join("a.txt");
+        let n = assemble(&[p0, p1], &dest).unwrap();
+        assert_eq!(n, 11);
+        assert_eq!(std::fs::read(&dest).unwrap(), b"hello world");
+        std::fs::remove_dir_all(&dir).ok();
     }
 }
