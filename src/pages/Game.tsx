@@ -70,15 +70,24 @@ export default function Game() {
   }
 
   async function onExtract() {
-    const selected = parts.filter((p) => p.checked).map((p) => p.url);
-    if (selected.length === 0) {
+    const checked = parts.filter((p) => p.checked);
+    if (checked.length === 0) {
       setStatus("No parts selected.");
       return;
     }
+    // Resume: skip parts already resolved, so re-running after a cancel
+    // continues from where it stopped instead of starting over.
+    const pending = checked
+      .filter((p) => results[p.url]?.status !== "done")
+      .map((p) => p.url);
+    if (pending.length === 0) {
+      setStatus("All selected parts already extracted.");
+      return;
+    }
     setBusy(true);
-    setStatus("Starting extraction…");
+    setStatus(`Extracting ${pending.length} remaining part(s)…`);
     try {
-      await extractLinks(selected);
+      await extractLinks(pending);
       setStatus("Extraction complete.");
     } catch (e) {
       setStatus(`Error: ${String(e)}`);
