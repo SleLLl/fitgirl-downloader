@@ -33,6 +33,21 @@ pub fn validate_fitgirl_url(input: &str) -> bool {
     }
 }
 
+/// Fetch a page's HTML with a browser-like User-Agent.
+pub async fn fetch_html(client: &reqwest::Client, url: &str) -> Result<String, reqwest::Error> {
+    client
+        .get(url)
+        .header(
+            "User-Agent",
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 \
+             (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+        )
+        .send()
+        .await?
+        .text()
+        .await
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
