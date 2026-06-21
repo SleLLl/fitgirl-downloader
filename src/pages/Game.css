@@ -1,0 +1,55 @@
+.game-page {
+  @apply min-h-screen bg-background text-foreground p-6 space-y-4;
+}
+
+.game-title {
+  @apply text-xl font-semibold;
+}
+
+.url-row {
+  @apply flex gap-2;
+}
+
+.status-text {
+  @apply text-sm text-muted-foreground italic;
+}
+
+.part-list {
+  @apply space-y-2 border border-border rounded-md p-3;
+}
+
+.part-scroll {
+  @apply max-h-64 overflow-auto space-y-1;
+}
+
+.part-row {
+  @apply flex items-center gap-2 text-sm;
+}
+
+.part-name {
+  @apply flex-1;
+}
+
+.part-status--done {
+  @apply text-green-400;
+}
+
+.part-status--failed {
+  @apply text-red-400;
+}
+
+.part-status--pending {
+  @apply text-yellow-400;
+}
+
+.links-section {
+  @apply space-y-2;
+}
+
+.links-heading {
+  @apply text-sm font-semibold;
+}
+
+.links-output {
+  @apply w-full h-40 bg-card border border-border rounded-md p-2 text-xs font-mono;
+}

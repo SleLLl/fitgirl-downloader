@@ -9,8 +9,15 @@ import {
   type ExtractProgress,
 } from "@/lib/api";
 import { filenameFromUrl } from "@/lib/format";
+import "./Game.css";
 
 type Part = { url: string; checked: boolean };
+
+function partStatusClass(status: ExtractProgress["status"]): string {
+  if (status === "done") return "part-status--done";
+  if (status === "failed") return "part-status--failed";
+  return "part-status--pending";
+}
 
 export default function Game() {
   const [url, setUrl] = useState(
@@ -26,7 +33,9 @@ export default function Game() {
       setResults((prev) => ({ ...prev, [p.sourceUrl]: p }));
       setStatus(
         `Extracting ${p.index + 1}/${p.total} — ${p.status}` +
-          (p.status === "needs_captcha" ? " (solve the captcha in the window)" : "")
+          (p.status === "needs_click"
+            ? " — click the DOWNLOAD button in the opened window"
+            : "")
       );
     });
     return () => {
@@ -87,10 +96,10 @@ export default function Game() {
     .filter((x): x is string => !!x);
 
   return (
-    <main className="dark min-h-screen bg-background text-foreground p-6 space-y-4">
-      <h1 className="text-xl font-semibold">FitGirl Downloader — Extract</h1>
+    <main className="game-page dark">
+      <h1 className="game-title">FitGirl Downloader — Extract</h1>
 
-      <div className="flex gap-2">
+      <div className="url-row">
         <Input
           value={url}
           onChange={(e) => setUrl(e.target.value)}
@@ -101,29 +110,19 @@ export default function Game() {
         </Button>
       </div>
 
-      <p className="text-sm text-muted-foreground italic">{status}</p>
+      <p className="status-text">{status}</p>
 
       {parts.length > 0 && (
-        <div className="space-y-2 border border-border rounded-md p-3">
-          <div className="max-h-64 overflow-auto space-y-1">
+        <div className="part-list">
+          <div className="part-scroll">
             {parts.map((p, i) => {
               const r = results[p.url];
               return (
-                <label key={p.url} className="flex items-center gap-2 text-sm">
+                <label key={p.url} className="part-row">
                   <Checkbox checked={p.checked} onCheckedChange={() => toggle(i)} />
-                  <span className="flex-1">{filenameFromUrl(p.url)}</span>
+                  <span className="part-name">{filenameFromUrl(p.url)}</span>
                   {r && (
-                    <span
-                      className={
-                        r.status === "done"
-                          ? "text-green-400"
-                          : r.status === "failed"
-                          ? "text-red-400"
-                          : "text-yellow-400"
-                      }
-                    >
-                      {r.status}
-                    </span>
+                    <span className={partStatusClass(r.status)}>{r.status}</span>
                   )}
                 </label>
               );
@@ -136,13 +135,11 @@ export default function Game() {
       )}
 
       {directLinks.length > 0 && (
-        <div className="space-y-2">
-          <h2 className="text-sm font-semibold">
-            Direct links ({directLinks.length})
-          </h2>
+        <div className="links-section">
+          <h2 className="links-heading">Direct links ({directLinks.length})</h2>
           <textarea
             readOnly
-            className="w-full h-40 bg-card border border-border rounded-md p-2 text-xs font-mono"
+            className="links-output"
             value={directLinks.join("\n")}
           />
           <Button
