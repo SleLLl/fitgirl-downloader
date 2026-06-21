@@ -53,7 +53,14 @@ export const useAppStore = create<AppState>((set) => ({
   setDownloadDir: (downloadDir) => set({ downloadDir }),
   mergeDownload: (item) =>
     set((s) => ({ downloads: { ...s.downloads, [item.id]: item } })),
+  // Merge, not replace: a live progress event that arrived before this seed
+  // resolved must not be clobbered by the older snapshot.
   seedDownloads: (items) =>
-    set({ downloads: Object.fromEntries(items.map((i) => [i.id, i])) }),
+    set((s) => ({
+      downloads: {
+        ...Object.fromEntries(items.map((i) => [i.id, i])),
+        ...s.downloads,
+      },
+    })),
   resetExtraction: () => set({ parts: [], results: {} }),
 }));
