@@ -1,16 +1,18 @@
 // Injected into every fuckingfast.co page load in the extractor window.
 //
-// The direct download URL is NOT in the static HTML — it appears only when the
-// DOWNLOAD button is clicked (its handler calls window.open(<directUrl>)). We
-// hook window.open at runtime to capture it, then transport it to Rust by
-// rewriting our own URL to `<page>?fflink=<encoded>`. Rust reads window.url();
-// unlike document.title, navigations are always reflected in the webview URL.
+// The direct download URL appears only when the DOWNLOAD button is clicked (its
+// handler calls window.open(<dl.fuckingfast.co/dl/...>)). We auto-click that
+// button until the URL is captured, hook window.open to grab it (suppressing the
+// ad popup), and transport it to Rust by rewriting our URL to
+// `<page>?fflink=<encoded>` (Rust reads window.url()).
 (function () {
+  // On the post-capture page we already did our job — do nothing.
+  if (window.location.search.indexOf("fflink=") !== -1) return;
+
   var captured = null;
 
   // A real download URL looks like a file or sits on the file host; ad popups
-  // (also opened via window.open) usually do neither. We act only on matches so
-  // the first "open ads" click can't poison the channel.
+  // (also window.open) usually do neither.
   function looksLikeDownload(u) {
     return (
       /\.(rar|zip|7z|bin|exe|iso|part\d+)(\?|#|$)/i.test(u) ||
@@ -22,20 +24,17 @@
     if (captured || !url) return;
     if (/^https?:\/\//.test(url) && looksLikeDownload(url)) {
       captured = url;
-      // Transport to Rust via the webview URL (reliable, unlike the title).
       window.location.search = "fflink=" + encodeURIComponent(url);
     }
   }
 
-  // Runtime window.open hook — captures any quote style / dynamically built URL
-  // and suppresses the popup (returns null) so ad windows don't spawn.
+  // Capture any window.open and suppress the popup.
   window.open = function (url) {
     capture(url);
     return null;
   };
 
-  // Capture-phase click listener — if the DOWNLOAD control is an anchor, read
-  // where it points even when it navigates in-window.
+  // If the DOWNLOAD control is an anchor, also read its href on click.
   document.addEventListener(
     "click",
     function (e) {
@@ -44,4 +43,26 @@
     },
     true
   );
+
+  // Auto-click the DOWNLOAD control until a link is captured, so the user does
+  // not have to. Repeated clicks are safe (popups suppressed). Under a Turnstile
+  // challenge the control is absent/inert and clicks no-op until the user clears
+  // it.
+  var attempts = 0;
+  var timer = setInterval(function () {
+    if (captured || attempts >= 40) {
+      clearInterval(timer);
+      return;
+    }
+    attempts++;
+    var els = document.querySelectorAll("a,button");
+    for (var i = 0; i < els.length; i++) {
+      if (/download/i.test(els[i].textContent || "")) {
+        try {
+          els[i].click();
+        } catch (e) {}
+        break;
+      }
+    }
+  }, 800);
 })();
