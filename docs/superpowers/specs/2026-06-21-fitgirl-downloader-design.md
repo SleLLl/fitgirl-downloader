@@ -44,20 +44,30 @@ Three layers:
 ### Key mechanism: how the WebView returns a link to Rust
 
 The `fuckingfast.co` page is third-party, so Tauri's IPC cannot be assumed inside
-it. Mechanism (robust, no extra dependencies):
+it. Two findings from implementation shaped the final mechanism:
 
-- An **initialization script** is injected into the extractor window. It hooks
-  `window.open(url)` (and watches the DOM for the same URL) and, on capture,
-  writes the result into `document.title` with a sentinel prefix:
-  `FFLINK::<direct_url>`.
-- The Rust side **polls the window title** (~200 ms). When it sees the
-  `FFLINK::` prefix it parses out the direct URL.
-- If the timeout elapses with no link **and** an interactive Turnstile challenge
-  is still present, Rust **shows the window** (fallback) and waits for the user to
-  solve it, then hides it again and continues the queue.
+- **The direct link is not in the static HTML.** It only materializes when the
+  user clicks the page's DOWNLOAD button, whose handler calls
+  `window.open("https://dl.fuckingfast.co/dl/<token>")`. So the extractor window
+  is **always shown** and the user clicks DOWNLOAD (the "first click opens ads,
+  second starts the download" page); there is no hidden auto-mode.
+- **The `document.title` channel does not work.** WebView2 on Windows does not
+  reflect a remote page's `document.title` changes via Tauri's `win.title()`, so
+  the original sentinel-title approach silently failed.
 
-*Alternative considered:* run a local HTTP endpoint and POST the captured URL from
-the injected script. Rejected as more complex than the title channel.
+Final mechanism (verified working):
+
+- An **initialization script** hooks `window.open(url)` at runtime (suppressing
+  the ad popup by returning `null`) and filters for download-looking URLs
+  (file extension or the `fuckingfast` host) so the "open ads" click can't poison
+  the channel.
+- On capture, the script **rewrites its own URL** to `<page>?fflink=<encoded>`.
+- The Rust side **polls `win.url()`** (~200 ms) and reads the `fflink` query
+  param — navigations are always reflected in the webview URL, unlike the title.
+
+*Alternatives considered:* (1) the `document.title` sentinel — rejected, doesn't
+work on Windows WebView2; (2) a local HTTP endpoint POST — rejected as more
+complex than the URL channel.
 
 ## Modules & File Structure
 
