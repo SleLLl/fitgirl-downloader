@@ -21,7 +21,14 @@ function App() {
           Downloads
         </Button>
       </nav>
-      <div className="p-4">{tab === "extract" ? <Game /> : <Downloads />}</div>
+      <div className="p-4">
+        <div hidden={tab !== "extract"}>
+          <Game />
+        </div>
+        <div hidden={tab !== "downloads"}>
+          <Downloads />
+        </div>
+      </div>
     </main>
   );
 }

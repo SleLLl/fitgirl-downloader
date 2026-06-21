@@ -45,7 +45,16 @@ export default function Game() {
   const [parts, setParts] = useState<Part[]>([]);
   const [busy, setBusy] = useState(false);
   const [results, setResults] = useState<Record<string, ExtractProgress>>({});
+  const [dir, setDir] = useState<string | null>(null);
   const cancelledRef = useRef(false);
+
+  // Ask for the download folder once per session, then reuse it.
+  async function ensureDir(): Promise<string | null> {
+    if (dir) return dir;
+    const picked = await pickDownloadDir();
+    if (picked) setDir(picked);
+    return picked;
+  }
 
   useEffect(() => {
     const un = onExtractProgress((p) => {
@@ -143,10 +152,20 @@ export default function Game() {
       setStatus("No resolved links to download yet.");
       return;
     }
-    const dir = await pickDownloadDir();
-    if (!dir) return;
-    await startDownloads(reqs, dir);
-    setStatus(`Queued ${reqs.length} download(s) into ${dir}.`);
+    const target = await ensureDir();
+    if (!target) return;
+    await startDownloads(reqs, target);
+    setStatus(`Queued ${reqs.length} download(s) into ${target}.`);
+  }
+
+  async function onDownloadOne(sourceUrl: string) {
+    const direct = results[sourceUrl]?.directUrl;
+    if (!direct) return;
+    const target = await ensureDir();
+    if (!target) return;
+    const filename = filenameFromUrl(sourceUrl);
+    await startDownloads([{ url: direct, filename }], target);
+    setStatus(`Queued ${filename} into ${target}.`);
   }
 
   function toggle(idx: number) {
@@ -161,6 +180,7 @@ export default function Game() {
 
   const hasResumed = parts.some((p) => results[p.url]?.status === "done");
   const extractLabel = hasResumed ? "Continue" : "Extract selected";
+  const downloadable = buildRequests(results);
 
   return (
     <main className="game-page">
@@ -190,6 +210,18 @@ export default function Game() {
                   <span className="part-name">{filenameFromUrl(p.url)}</span>
                   {r && (
                     <span className={partStatusClass(r.status)}>{r.status}</span>
+                  )}
+                  {r?.status === "done" && r.directUrl && (
+                    <Button
+                      variant="secondary"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        onDownloadOne(p.url);
+                      }}
+                    >
+                      Download
+                    </Button>
                   )}
                 </label>
               );
@@ -226,8 +258,12 @@ export default function Game() {
           >
             Copy all
           </Button>
-          <Button variant="secondary" onClick={onDownloadAll}>
-            Download all
+          <Button
+            variant="secondary"
+            onClick={onDownloadAll}
+            disabled={busy || downloadable.length === 0}
+          >
+            Download all ({downloadable.length})
           </Button>
         </div>
       )}
