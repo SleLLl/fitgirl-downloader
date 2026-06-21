@@ -139,6 +139,16 @@ pub async fn extract_links(
 
     'parts: for (i, src) in urls.iter().enumerate() {
         if cancel.load(Ordering::Relaxed) {
+            let _ = app.emit(
+                "extract-progress",
+                ExtractProgress {
+                    index: i,
+                    total,
+                    source_url: src.clone(),
+                    status: "cancelled".into(),
+                    direct_url: None,
+                },
+            );
             break;
         }
         let _ = app.emit(
