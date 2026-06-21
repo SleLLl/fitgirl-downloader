@@ -53,3 +53,7 @@
 .links-output {
   @apply w-full h-40 bg-card border border-border rounded-md p-2 text-xs font-mono;
 }
+
+.controls-row {
+  @apply flex gap-2;
+}

@@ -3,11 +3,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
+  cancelExtraction,
   extractLinks,
   fetchParts,
   onExtractProgress,
   type ExtractProgress,
 } from "@/lib/api";
+import { failedSourceUrls } from "@/lib/extract";
 import { filenameFromUrl } from "@/lib/format";
 import "./Game.css";
 
@@ -85,6 +87,30 @@ export default function Game() {
     }
   }
 
+  async function onCancel() {
+    setStatus("Cancelling…");
+    try {
+      await cancelExtraction();
+    } catch (e) {
+      setStatus(`Error: ${String(e)}`);
+    }
+  }
+
+  async function onRetryFailed() {
+    const failed = failedSourceUrls(results);
+    if (failed.length === 0) return;
+    setBusy(true);
+    setStatus(`Retrying ${failed.length} failed part(s)…`);
+    try {
+      await extractLinks(failed);
+      setStatus("Retry complete.");
+    } catch (e) {
+      setStatus(`Error: ${String(e)}`);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   function toggle(idx: number) {
     setParts((prev) =>
       prev.map((p, i) => (i === idx ? { ...p, checked: !p.checked } : p))
@@ -128,9 +154,21 @@ export default function Game() {
               );
             })}
           </div>
-          <Button onClick={onExtract} disabled={busy}>
-            Extract selected
-          </Button>
+          <div className="controls-row">
+            <Button onClick={onExtract} disabled={busy}>
+              Extract selected
+            </Button>
+            {busy && (
+              <Button variant="destructive" onClick={onCancel}>
+                Cancel
+              </Button>
+            )}
+            {!busy && failedSourceUrls(results).length > 0 && (
+              <Button variant="secondary" onClick={onRetryFailed}>
+                Retry failed ({failedSourceUrls(results).length})
+              </Button>
+            )}
+          </div>
         </div>
       )}
 
