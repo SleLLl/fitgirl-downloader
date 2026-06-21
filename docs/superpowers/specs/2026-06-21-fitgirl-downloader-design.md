@@ -119,9 +119,12 @@ restart (resume from where it stopped).
 
 ## Error Handling & Risks
 
-1. **Direct link needs Cloudflare cookie/UA (Risk #1):** the download engine
-   reuses cookies + User-Agent from the WebView session. Verified against the
-   first extracted part before building further.
+1. **Direct link auth (Risk #1) — RESOLVED:** a plain GET to
+   `dl.fuckingfast.co/dl/<token>` with only a browser `User-Agent` (no cookies)
+   returns `200 OK`. A `bytes=0-15` request returns `206 Partial Content` with
+   `Content-Range`, so the host supports HTTP Range. The download engine needs
+   **no** WebView cookie store — a stateless `reqwest` client with a browser UA
+   suffices, and segmented (multi-connection) downloads work.
 2. **Host doesn't support Range:** fall back to single-stream download for that
    file (detected via `Accept-Ranges` / a probe request).
 3. **FitGirl / fuckingfast markup changes:** parsers are isolated; selectors and
@@ -139,9 +142,9 @@ resolved links programmatically:
   resolved direct URL against the previous one (`exclude`). Replace with a
   per-navigation nonce baked into the sentinel (`FFLINK::<seq>::<url>`) so the
   title channel is race-free even when consecutive parts resolve to equal URLs.
-- **Shared HTTP client / cookies:** `fetch_parts` builds a fresh stateless
-  `reqwest::Client` per call. Plan B's download engine needs a shared client
-  with the WebView's cookie store + User-Agent (this is Risk #1).
+- **Shared HTTP client / cookies — not needed:** Risk #1 is resolved — direct
+  links download with only a browser User-Agent, no cookies. The download engine
+  uses its own stateless `reqwest` client; no WebView session sharing required.
 
 ## Testing Strategy
 
