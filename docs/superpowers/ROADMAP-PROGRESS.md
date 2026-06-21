@@ -84,3 +84,14 @@ fresh morning one) can read this to know exactly where things stand and continue
   (getSettings/setSetting), store `settings` slice, useAppEvents loads settings
   + folder, useDownloads persists folder on pick, Downloads settings panel +
   Resume all button. Then review + merge B2. Then C (showcase).
+- B2 Task 4 DONE (`d79c9a5`): settings.ts, store settings slice, useAppEvents
+  loads settings+folder, ensureDir persists folder, SettingsPanel + Resume all.
+- B2 final review done (opus): ready to merge — crash-consistent persistence,
+  correct segment recovery (no corruption), no mutex-across-await/deadlock,
+  in-memory DB fallback never blocks launch. Minor findings only (partial-final
+  edge, unenforced input bounds) — deferred. **B2 MERGED to master (`d79c9a5`),
+  branch deleted. DONE.** Needs user live-verify: kill app mid-download →
+  relaunch → paused with partial sizes → Resume completes; folder remembered.
+- NEXT: C — Showcase (scrape `fitgirl-repacks.site` homepage → top-repacks grid
+  with covers; click loads the game URL into Extract). Then updater/distribution
+  = DESIGN DOC ONLY (do not implement autonomously).
