@@ -33,8 +33,8 @@ export default function Game() {
       setResults((prev) => ({ ...prev, [p.sourceUrl]: p }));
       setStatus(
         `Extracting ${p.index + 1}/${p.total} — ${p.status}` +
-          (p.status === "needs_click"
-            ? " — click the DOWNLOAD button in the opened window"
+          (p.status === "needs_captcha"
+            ? " — solve the captcha in the opened window"
             : "")
       );
     });

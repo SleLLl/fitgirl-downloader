@@ -3,7 +3,12 @@ import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 
 export type FetchResult = { valid: boolean; parts: string[] };
 
-export type ExtractStatus = "needs_click" | "done" | "failed";
+export type ExtractStatus =
+  | "processing"
+  | "needs_captcha"
+  | "done"
+  | "failed"
+  | "cancelled";
 
 export type ExtractProgress = {
   index: number;
@@ -25,4 +30,8 @@ export function onExtractProgress(
   cb: (p: ExtractProgress) => void
 ): Promise<UnlistenFn> {
   return listen<ExtractProgress>("extract-progress", (e) => cb(e.payload));
+}
+
+export function cancelExtraction(): Promise<void> {
+  return invoke<void>("cancel_extraction");
 }
