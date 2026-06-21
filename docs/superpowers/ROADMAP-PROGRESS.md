@@ -75,3 +75,12 @@ fresh morning one) can read this to know exactly where things stand and continue
   T2 manager persist/restore + settings-driven concurrency, T3 settings commands
   + startup DB wiring (app_data_dir), T4 frontend settings panel + persisted
   folder + Resume all, T5 manual restart verify (user).
+- B2 Task 2+3 DONE (`5a1a0bf`): DownloadManager+Arc<Db>, persists jobs/status,
+  restore_from_db (downloading->paused, progress from .partN), per-download
+  segments + file_concurrency from settings, get_settings/set_setting/resume_all
+  commands, lib.rs opens SQLite in app_data_dir (in-memory fallback). 15 Rust
+  tests green, build clean. Backend command surface added: resume_all,
+  get_settings, set_setting. NEXT B2 T4: frontend `src/lib/settings.ts`
+  (getSettings/setSetting), store `settings` slice, useAppEvents loads settings
+  + folder, useDownloads persists folder on pick, Downloads settings panel +
+  Resume all button. Then review + merge B2. Then C (showcase).
