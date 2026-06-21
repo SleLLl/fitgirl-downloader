@@ -57,3 +57,7 @@
 .controls-row {
   @apply flex gap-2;
 }
+
+.part-dl {
+  @apply text-xs text-muted-foreground;
+}
