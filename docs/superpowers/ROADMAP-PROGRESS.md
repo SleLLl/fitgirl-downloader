@@ -50,3 +50,9 @@ fresh morning one) can read this to know exactly where things stand and continue
   Task 3 components (UrlBar/PartRow/PartList/ExtractControls/LinksPanel + inline
   download indicator), Task 4 thin Game/Downloads/App + adapt tests + tab badge.
   Keep Game.test/Downloads.test green. Then B2, then C.
+- B1.5 ALL TASKS DONE on `feat/plan-b15-frontend-refactor` (store `3a0e544`,
+  hooks `36bb8f8`, components `c151557`, switchover `fc9eb4c`). 14 vitest green,
+  build clean. Tests adapted store-driven; PartRow inline-indicator test added.
+  NEEDS USER LIVE-VERIFY (frontend refactor — tab badge, inline dl progress,
+  no behaviour regression; can't run GUI autonomously). NEXT: B1.5 final review
+  (fresh-eyes subagent) + merge to master, then B2 (durability) brainstorm.
