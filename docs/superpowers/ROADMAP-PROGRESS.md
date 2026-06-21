@@ -43,5 +43,10 @@ fresh morning one) can read this to know exactly where things stand and continue
   cancel temp-delete race, SEGMENTS coupling in cancel cleanup, speed-throttle
   noise, missing aggregate progress line) deferred to B2/polish.
 - **B1 MERGED to master (`cc953b9`), branch deleted. DONE.**
-- NEXT: B1.5 — frontend refactor (Zustand store + split Game.tsx + per-part
-  download indicator without tab switch). Then B2, then C.
+- B1.5 IN PROGRESS on branch `feat/plan-b15-frontend-refactor`. Spec + plan
+  written (`docs/.../2026-06-21-plan-b15-frontend-refactor.md`). Task 1 done:
+  Zustand store `src/store/useAppStore.ts` + tests (`3a0e544`). Executed INLINE
+  (coupled refactor). NEXT: Task 2 hooks (useExtraction/useDownloads/useAppEvents),
+  Task 3 components (UrlBar/PartRow/PartList/ExtractControls/LinksPanel + inline
+  download indicator), Task 4 thin Game/Downloads/App + adapt tests + tab badge.
+  Keep Game.test/Downloads.test green. Then B2, then C.
