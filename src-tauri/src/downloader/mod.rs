@@ -1,20 +1,21 @@
 pub mod segment;
 
 use std::collections::HashMap;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
-use std::time::Instant;
+use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Emitter, State};
 use tokio::sync::Semaphore;
 
-use crate::downloader::segment::download_file;
+use crate::db::{Db, DownloadRow};
+use crate::downloader::segment::{download_file, temp_path};
 
-/// Defaults (configurable later in B2). 3 files × 4 segments ≤ 12 connections.
-const FILE_CONCURRENCY: usize = 3;
-const SEGMENTS: u64 = 4;
+/// Defaults when no persisted setting exists. 3 files × 4 segments ≤ 12 conns.
+const DEFAULT_FILE_CONCURRENCY: usize = 3;
+const DEFAULT_SEGMENTS: u64 = 4;
 const SEG_CONCURRENCY: usize = 4;
 
 #[derive(Clone, Deserialize)]
@@ -36,16 +37,24 @@ pub struct DownloadItem {
     pub speed_bps: u64,
 }
 
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SettingsDto {
+    pub download_dir: Option<String>,
+    pub file_concurrency: u32,
+    pub segments: u32,
+}
+
 struct Shared {
     url: String,
     filename: String,
     dir: String,
+    /// Segment count fixed at creation (the `.partN` layout depends on it).
+    segments: u64,
     total: AtomicU64,
     downloaded: AtomicU64,
     speed: AtomicU64,
     status: Mutex<String>,
-    /// The CURRENT attempt's stop flag. Each spawn installs a fresh one, so a
-    /// resume can never un-stop a previous (still-draining) task.
     stop: Mutex<Arc<AtomicBool>>,
     last: Mutex<(u64, Instant)>,
 }
@@ -65,8 +74,35 @@ impl Shared {
     }
 }
 
+fn now_secs() -> i64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_secs() as i64)
+        .unwrap_or(0)
+}
+
+/// Count how many consecutive `.part0,.part1,…` files already exist on disk.
+fn detect_segments(dest: &Path) -> u64 {
+    let mut k = 0u64;
+    while temp_path(dest, k as usize).exists() {
+        k += 1;
+    }
+    k
+}
+
+fn disk_downloaded(dest: &Path, segments: u64) -> u64 {
+    (0..segments)
+        .map(|k| {
+            std::fs::metadata(temp_path(dest, k as usize))
+                .map(|m| m.len())
+                .unwrap_or(0)
+        })
+        .sum()
+}
+
 pub struct DownloadManager {
     app: AppHandle,
+    db: Arc<Db>,
     items: Arc<Mutex<HashMap<String, Arc<Shared>>>>,
     order: Arc<Mutex<Vec<String>>>,
     file_sem: Arc<Semaphore>,
@@ -74,21 +110,87 @@ pub struct DownloadManager {
 }
 
 impl DownloadManager {
-    pub fn new(app: AppHandle) -> Self {
+    pub fn new(app: AppHandle, db: Arc<Db>) -> Self {
+        let file_concurrency = db
+            .get_setting("file_concurrency")
+            .ok()
+            .flatten()
+            .and_then(|v| v.parse::<usize>().ok())
+            .filter(|n| *n >= 1)
+            .unwrap_or(DEFAULT_FILE_CONCURRENCY);
         Self {
             app,
+            db,
             items: Arc::new(Mutex::new(HashMap::new())),
             order: Arc::new(Mutex::new(Vec::new())),
-            file_sem: Arc::new(Semaphore::new(FILE_CONCURRENCY)),
+            file_sem: Arc::new(Semaphore::new(file_concurrency)),
             next_id: AtomicU64::new(1),
+        }
+    }
+
+    fn segments_setting(&self) -> u64 {
+        self.db
+            .get_setting("segments")
+            .ok()
+            .flatten()
+            .and_then(|v| v.parse::<u64>().ok())
+            .filter(|n| *n >= 1)
+            .unwrap_or(DEFAULT_SEGMENTS)
+    }
+
+    /// Repopulate the manager from persisted unfinished jobs at startup. A job
+    /// that was `downloading` becomes `paused` (its task didn't survive); progress
+    /// is recomputed from the on-disk part files. Jobs are NOT auto-resumed.
+    pub fn restore_from_db(&self) {
+        let rows = match self.db.load_unfinished() {
+            Ok(r) => r,
+            Err(_) => return,
+        };
+        let mut max_id = 0u64;
+        for row in rows {
+            if let Some(n) = row.id.strip_prefix("dl").and_then(|s| s.parse::<u64>().ok()) {
+                max_id = max_id.max(n);
+            }
+            let dest = PathBuf::from(&row.dir).join(&row.filename);
+            let (downloaded, status, segments) = if dest.exists() {
+                let len = std::fs::metadata(&dest).map(|m| m.len()).unwrap_or(0);
+                (len, "done".to_string(), self.segments_setting())
+            } else {
+                let mut segs = detect_segments(&dest);
+                if segs == 0 {
+                    segs = self.segments_setting();
+                }
+                (disk_downloaded(&dest, segs), "paused".to_string(), segs)
+            };
+            let _ = self.db.set_status(&row.id, &status);
+            let shared = Arc::new(Shared {
+                url: row.url,
+                filename: row.filename,
+                dir: row.dir,
+                segments,
+                total: AtomicU64::new(row.total_bytes.max(0) as u64),
+                downloaded: AtomicU64::new(downloaded),
+                speed: AtomicU64::new(0),
+                status: Mutex::new(status),
+                stop: Mutex::new(Arc::new(AtomicBool::new(false))),
+                last: Mutex::new((downloaded, Instant::now())),
+            });
+            let id = row.id.clone();
+            self.items.lock().unwrap().insert(id.clone(), shared.clone());
+            self.order.lock().unwrap().push(id.clone());
+            let _ = self.app.emit("download-progress", shared.snapshot(&id));
+        }
+        if max_id + 1 > self.next_id.load(Ordering::Relaxed) {
+            self.next_id.store(max_id + 1, Ordering::Relaxed);
         }
     }
 
     fn spawn_download(&self, id: String, shared: Arc<Shared>) {
         let app = self.app.clone();
+        let db = self.db.clone();
         let file_sem = self.file_sem.clone();
         let dest = PathBuf::from(&shared.dir).join(&shared.filename);
-        // Install a fresh stop flag for THIS attempt; the old task keeps its own.
+        let segments = shared.segments;
         let stop = Arc::new(AtomicBool::new(false));
         *shared.stop.lock().unwrap() = stop.clone();
         tauri::async_runtime::spawn(async move {
@@ -100,6 +202,7 @@ impl DownloadManager {
                 return;
             }
             *shared.status.lock().unwrap() = "downloading".to_string();
+            let _ = db.set_status(&id, "downloading");
             let _ = app.emit("download-progress", shared.snapshot(&id));
 
             let s2 = shared.clone();
@@ -122,7 +225,7 @@ impl DownloadManager {
                 &client,
                 &shared.url,
                 &dest,
-                SEGMENTS,
+                segments,
                 SEG_CONCURRENCY,
                 on_bytes,
                 stop.clone(),
@@ -147,6 +250,7 @@ impl DownloadManager {
             };
             shared.speed.store(0, Ordering::Relaxed);
             *shared.status.lock().unwrap() = status.to_string();
+            let _ = db.set_status(&id, status);
             let _ = app.emit("download-progress", shared.snapshot(&id));
         });
     }
@@ -159,13 +263,25 @@ pub fn start_downloads(
     items: Vec<DownloadRequest>,
     dir: String,
 ) -> Vec<DownloadItem> {
+    let segments = manager.segments_setting();
     let mut started = Vec::new();
     for req in items {
         let id = format!("dl{}", manager.next_id.fetch_add(1, Ordering::Relaxed));
+        let created_at = now_secs();
+        let _ = manager.db.upsert_job(&DownloadRow {
+            id: id.clone(),
+            url: req.url.clone(),
+            filename: req.filename.clone(),
+            dir: dir.clone(),
+            total_bytes: 0,
+            status: "queued".to_string(),
+            created_at,
+        });
         let shared = Arc::new(Shared {
             url: req.url,
             filename: req.filename,
             dir: dir.clone(),
+            segments,
             total: AtomicU64::new(0),
             downloaded: AtomicU64::new(0),
             speed: AtomicU64::new(0),
@@ -185,8 +301,6 @@ pub fn start_downloads(
     started
 }
 
-/// Signal the current attempt to stop. The running task observes the flag, stops,
-/// and sets status to "paused" on exit — so "paused" reliably means "task gone".
 #[tauri::command]
 pub fn pause_download(manager: State<'_, DownloadManager>, id: String) {
     if let Some(shared) = manager.items.lock().unwrap().get(&id).cloned() {
@@ -194,8 +308,6 @@ pub fn pause_download(manager: State<'_, DownloadManager>, id: String) {
     }
 }
 
-/// Re-spawn only when the previous attempt has finished (status paused/failed),
-/// which guarantees no two tasks ever write the same temp files concurrently.
 #[tauri::command]
 pub fn resume_download(manager: State<'_, DownloadManager>, id: String) {
     let shared = manager.items.lock().unwrap().get(&id).cloned();
@@ -207,14 +319,37 @@ pub fn resume_download(manager: State<'_, DownloadManager>, id: String) {
     }
 }
 
+/// Resume every paused download.
+#[tauri::command]
+pub fn resume_all(manager: State<'_, DownloadManager>) {
+    let pending: Vec<(String, Arc<Shared>)> = {
+        let items = manager.items.lock().unwrap();
+        manager
+            .order
+            .lock()
+            .unwrap()
+            .iter()
+            .filter_map(|id| items.get(id).map(|s| (id.clone(), s.clone())))
+            .filter(|(_, s)| {
+                let st = s.status.lock().unwrap();
+                *st == "paused" || *st == "failed"
+            })
+            .collect()
+    };
+    for (id, shared) in pending {
+        manager.spawn_download(id, shared);
+    }
+}
+
 #[tauri::command]
 pub fn cancel_download(manager: State<'_, DownloadManager>, id: String) {
     if let Some(shared) = manager.items.lock().unwrap().get(&id).cloned() {
         *shared.status.lock().unwrap() = "cancelled".to_string();
         shared.stop.lock().unwrap().store(true, Ordering::Relaxed);
+        let _ = manager.db.set_status(&id, "cancelled");
         let dest = PathBuf::from(&shared.dir).join(&shared.filename);
-        for k in 0..(SEGMENTS as usize) {
-            let _ = std::fs::remove_file(crate::downloader::segment::temp_path(&dest, k));
+        for k in 0..(shared.segments as usize) {
+            let _ = std::fs::remove_file(temp_path(&dest, k));
         }
     }
 }
@@ -229,4 +364,28 @@ pub fn list_downloads(manager: State<'_, DownloadManager>) -> Vec<DownloadItem> 
         .iter()
         .filter_map(|id| items.get(id).map(|s| s.snapshot(id)))
         .collect()
+}
+
+#[tauri::command]
+pub fn get_settings(db: State<'_, Arc<Db>>) -> SettingsDto {
+    SettingsDto {
+        download_dir: db.get_setting("download_dir").ok().flatten(),
+        file_concurrency: db
+            .get_setting("file_concurrency")
+            .ok()
+            .flatten()
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(DEFAULT_FILE_CONCURRENCY as u32),
+        segments: db
+            .get_setting("segments")
+            .ok()
+            .flatten()
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(DEFAULT_SEGMENTS as u32),
+    }
+}
+
+#[tauri::command]
+pub fn set_setting(db: State<'_, Arc<Db>>, key: String, value: String) {
+    let _ = db.set_setting(&key, &value);
 }

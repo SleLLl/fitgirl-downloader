@@ -19,8 +19,13 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .manage(extractor::ExtractorState::default())
         .setup(|app| {
-            let handle = app.handle().clone();
-            app.manage(downloader::DownloadManager::new(handle));
+            // Open the local SQLite DB in the app-data dir; fall back to an
+            // in-memory DB so a DB error never blocks launch.
+            let db = std::sync::Arc::new(open_db(app.handle()));
+            app.manage(db.clone());
+            let manager = downloader::DownloadManager::new(app.handle().clone(), db);
+            manager.restore_from_db();
+            app.manage(manager);
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -31,9 +36,25 @@ pub fn run() {
             downloader::start_downloads,
             downloader::pause_download,
             downloader::resume_download,
+            downloader::resume_all,
             downloader::cancel_download,
-            downloader::list_downloads
+            downloader::list_downloads,
+            downloader::get_settings,
+            downloader::set_setting
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+fn open_db(app: &tauri::AppHandle) -> db::Db {
+    if let Ok(dir) = app.path().app_data_dir() {
+        let _ = std::fs::create_dir_all(&dir);
+        let path = dir.join("fitgirl-downloader.db");
+        if let Some(p) = path.to_str() {
+            if let Ok(db) = db::Db::open(p) {
+                return db;
+            }
+        }
+    }
+    db::Db::open_in_memory().expect("in-memory DB")
 }
