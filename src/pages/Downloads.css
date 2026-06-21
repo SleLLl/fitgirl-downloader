@@ -25,3 +25,24 @@
 .dl-actions {
   @apply flex gap-2;
 }
+.downloads-header {
+  @apply flex items-center justify-between;
+}
+.settings-panel {
+  @apply border border-border rounded-md p-3 space-y-2 text-sm;
+}
+.settings-row {
+  @apply flex items-center gap-2;
+}
+.settings-label {
+  @apply w-32 text-muted-foreground;
+}
+.settings-value {
+  @apply font-mono text-xs;
+}
+.settings-input {
+  @apply w-20 bg-card border border-border rounded px-2 py-1;
+}
+.settings-note {
+  @apply text-xs text-muted-foreground;
+}

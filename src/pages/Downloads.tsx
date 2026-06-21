@@ -6,16 +6,29 @@ import {
   pauseDownload,
   resumeDownload,
 } from "@/lib/download";
+import { resumeAll } from "@/lib/settings";
+import { SettingsPanel } from "@/components/SettingsPanel";
 import { useAppStore } from "@/store/useAppStore";
 import "./Downloads.css";
 
 export default function Downloads() {
   const items = useAppStore((s) => s.downloads);
   const rows = Object.values(items);
+  const pausedCount = rows.filter(
+    (d) => d.status === "paused" || d.status === "failed"
+  ).length;
 
   return (
     <div className="downloads-page">
-      <h2 className="downloads-title">Downloads ({rows.length})</h2>
+      <SettingsPanel />
+      <div className="downloads-header">
+        <h2 className="downloads-title">Downloads ({rows.length})</h2>
+        {pausedCount > 0 && (
+          <Button variant="secondary" onClick={() => resumeAll()}>
+            Resume all ({pausedCount})
+          </Button>
+        )}
+      </div>
       {rows.length === 0 && <p className="downloads-empty">No downloads yet.</p>}
       {rows.map((it) => {
         const pct =

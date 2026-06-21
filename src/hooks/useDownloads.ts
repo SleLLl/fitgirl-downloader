@@ -1,5 +1,6 @@
 import { useAppStore } from "@/store/useAppStore";
 import { buildRequests, pickDownloadDir, startDownloads } from "@/lib/download";
+import { setSetting } from "@/lib/settings";
 import { filenameFromUrl } from "@/lib/format";
 
 /// Download orchestration over the store. The download folder is asked once per
@@ -11,7 +12,10 @@ export function useDownloads() {
     const cur = s.getState().downloadDir;
     if (cur) return cur;
     const picked = await pickDownloadDir();
-    if (picked) s.getState().setDownloadDir(picked);
+    if (picked) {
+      s.getState().setDownloadDir(picked);
+      void setSetting("download_dir", picked);
+    }
     return picked;
   }
 

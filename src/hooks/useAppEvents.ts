@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { onExtractProgress } from "@/lib/api";
 import { listDownloads, onDownloadProgress } from "@/lib/download";
+import { getSettings } from "@/lib/settings";
 import { statusText } from "@/lib/format";
 import { useAppStore } from "@/store/useAppStore";
 
@@ -9,9 +10,19 @@ import { useAppStore } from "@/store/useAppStore";
 /// download list on mount.
 export function useAppEvents() {
   useEffect(() => {
-    const { mergeResult, setStatus, mergeDownload, seedDownloads } =
-      useAppStore.getState();
+    const {
+      mergeResult,
+      setStatus,
+      mergeDownload,
+      seedDownloads,
+      setSettings,
+      setDownloadDir,
+    } = useAppStore.getState();
     listDownloads().then(seedDownloads);
+    getSettings().then((s) => {
+      setSettings(s);
+      if (s.downloadDir) setDownloadDir(s.downloadDir);
+    });
     const unExtract = onExtractProgress((p) => {
       mergeResult(p);
       if (useAppStore.getState().cancelled) return;

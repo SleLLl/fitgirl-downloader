@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import type { ExtractProgress } from "@/lib/api";
 import type { DownloadItem } from "@/lib/download";
+import type { Settings } from "@/lib/settings";
 
 export type Part = { url: string; checked: boolean };
 
@@ -13,6 +14,7 @@ type AppState = {
   results: Record<string, ExtractProgress>;
   downloadDir: string | null;
   downloads: Record<string, DownloadItem>;
+  settings: Settings | null;
 
   setUrl: (url: string) => void;
   setStatus: (status: string) => void;
@@ -24,6 +26,7 @@ type AppState = {
   setDownloadDir: (dir: string | null) => void;
   mergeDownload: (item: DownloadItem) => void;
   seedDownloads: (items: DownloadItem[]) => void;
+  setSettings: (settings: Settings) => void;
   resetExtraction: () => void;
 };
 
@@ -36,6 +39,7 @@ export const useAppStore = create<AppState>((set) => ({
   results: {},
   downloadDir: null,
   downloads: {},
+  settings: null,
 
   setUrl: (url) => set({ url }),
   setStatus: (status) => set({ status }),
@@ -62,5 +66,6 @@ export const useAppStore = create<AppState>((set) => ({
         ...s.downloads,
       },
     })),
+  setSettings: (settings) => set({ settings }),
   resetExtraction: () => set({ parts: [], results: {} }),
 }));

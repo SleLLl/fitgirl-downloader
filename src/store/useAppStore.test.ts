@@ -48,4 +48,13 @@ describe("useAppStore", () => {
     useAppStore.getState().resetExtraction();
     expect(useAppStore.getState().parts).toEqual([]);
   });
+
+  it("setSettings stores the settings object", () => {
+    useAppStore.getState().setSettings({
+      downloadDir: "/d",
+      fileConcurrency: 3,
+      segments: 4,
+    });
+    expect(useAppStore.getState().settings?.downloadDir).toBe("/d");
+  });
 });
