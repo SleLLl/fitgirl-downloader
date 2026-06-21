@@ -44,7 +44,9 @@ struct Shared {
     downloaded: AtomicU64,
     speed: AtomicU64,
     status: Mutex<String>,
-    stop: Arc<AtomicBool>,
+    /// The CURRENT attempt's stop flag. Each spawn installs a fresh one, so a
+    /// resume can never un-stop a previous (still-draining) task.
+    stop: Mutex<Arc<AtomicBool>>,
     last: Mutex<(u64, Instant)>,
 }
 
@@ -86,12 +88,15 @@ impl DownloadManager {
         let app = self.app.clone();
         let file_sem = self.file_sem.clone();
         let dest = PathBuf::from(&shared.dir).join(&shared.filename);
+        // Install a fresh stop flag for THIS attempt; the old task keeps its own.
+        let stop = Arc::new(AtomicBool::new(false));
+        *shared.stop.lock().unwrap() = stop.clone();
         tauri::async_runtime::spawn(async move {
             let _permit = match file_sem.acquire().await {
                 Ok(p) => p,
                 Err(_) => return,
             };
-            if shared.stop.load(Ordering::Relaxed) {
+            if stop.load(Ordering::Relaxed) {
                 return;
             }
             *shared.status.lock().unwrap() = "downloading".to_string();
@@ -120,7 +125,7 @@ impl DownloadManager {
                 SEGMENTS,
                 SEG_CONCURRENCY,
                 on_bytes,
-                shared.stop.clone(),
+                stop.clone(),
             )
             .await;
 
@@ -165,7 +170,7 @@ pub fn start_downloads(
             downloaded: AtomicU64::new(0),
             speed: AtomicU64::new(0),
             status: Mutex::new("queued".to_string()),
-            stop: Arc::new(AtomicBool::new(false)),
+            stop: Mutex::new(Arc::new(AtomicBool::new(false))),
             last: Mutex::new((0, Instant::now())),
         });
         manager
@@ -180,21 +185,25 @@ pub fn start_downloads(
     started
 }
 
+/// Signal the current attempt to stop. The running task observes the flag, stops,
+/// and sets status to "paused" on exit — so "paused" reliably means "task gone".
 #[tauri::command]
 pub fn pause_download(manager: State<'_, DownloadManager>, id: String) {
     if let Some(shared) = manager.items.lock().unwrap().get(&id).cloned() {
-        *shared.status.lock().unwrap() = "paused".to_string();
-        shared.stop.store(true, Ordering::Relaxed);
+        shared.stop.lock().unwrap().store(true, Ordering::Relaxed);
     }
 }
 
+/// Re-spawn only when the previous attempt has finished (status paused/failed),
+/// which guarantees no two tasks ever write the same temp files concurrently.
 #[tauri::command]
 pub fn resume_download(manager: State<'_, DownloadManager>, id: String) {
     let shared = manager.items.lock().unwrap().get(&id).cloned();
     if let Some(shared) = shared {
-        shared.stop.store(false, Ordering::Relaxed);
-        *shared.status.lock().unwrap() = "queued".to_string();
-        manager.spawn_download(id, shared);
+        let status = shared.status.lock().unwrap().clone();
+        if status == "paused" || status == "failed" {
+            manager.spawn_download(id, shared);
+        }
     }
 }
 
@@ -202,7 +211,7 @@ pub fn resume_download(manager: State<'_, DownloadManager>, id: String) {
 pub fn cancel_download(manager: State<'_, DownloadManager>, id: String) {
     if let Some(shared) = manager.items.lock().unwrap().get(&id).cloned() {
         *shared.status.lock().unwrap() = "cancelled".to_string();
-        shared.stop.store(true, Ordering::Relaxed);
+        shared.stop.lock().unwrap().store(true, Ordering::Relaxed);
         let dest = PathBuf::from(&shared.dir).join(&shared.filename);
         for k in 0..(SEGMENTS as usize) {
             let _ = std::fs::remove_file(crate::downloader::segment::temp_path(&dest, k));
