@@ -130,6 +130,9 @@ export default function Game() {
     .map((p) => results[p.url]?.directUrl)
     .filter((x): x is string => !!x);
 
+  const hasResumed = parts.some((p) => results[p.url]?.status === "done");
+  const extractLabel = hasResumed ? "Continue" : "Extract selected";
+
   return (
     <main className="game-page dark">
       <h1 className="game-title">FitGirl Downloader — Extract</h1>
@@ -165,7 +168,7 @@ export default function Game() {
           </div>
           <div className="controls-row">
             <Button onClick={onExtract} disabled={busy}>
-              Extract selected
+              {extractLabel}
             </Button>
             {busy && (
               <Button variant="destructive" onClick={onCancel}>
