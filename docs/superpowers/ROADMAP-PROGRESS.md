@@ -56,3 +56,10 @@ fresh morning one) can read this to know exactly where things stand and continue
   NEEDS USER LIVE-VERIFY (frontend refactor — tab badge, inline dl progress,
   no behaviour regression; can't run GUI autonomously). NEXT: B1.5 final review
   (fresh-eyes subagent) + merge to master, then B2 (durability) brainstorm.
+- B1.5 final review done (opus): ready to merge, behaviour preserved across all
+  flows; applied 1 pre-merge fix (seedDownloads merges, `5709cdf`). **B1.5 MERGED
+  to master (`5709cdf`), branch deleted. DONE.** (Still worth a user live-verify
+  of the UI in the morning.) Two deferred Minors: PartRow filename-keyed lookup,
+  per-row subscribe-to-whole-downloads — fine at this scale.
+- NEXT: B2 — durability (sqlx SQLite job persistence + resume across app restart
+  + remembered settings: download folder, concurrency).
