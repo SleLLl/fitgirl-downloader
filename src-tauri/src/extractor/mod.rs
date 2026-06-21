@@ -77,9 +77,8 @@ pub async fn extract_links(app: AppHandle, urls: Vec<String>) -> Result<Vec<Stri
             },
         );
 
-        let nav = win.clone();
         if let Ok(u) = Url::parse(src) {
-            let _ = nav.navigate(u);
+            let _ = win.navigate(u);
         }
         // Let the new document begin loading so we don't read a stale title.
         tokio::time::sleep(Duration::from_millis(1200)).await;

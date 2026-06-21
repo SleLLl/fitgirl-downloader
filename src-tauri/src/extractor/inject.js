@@ -6,7 +6,9 @@
   var RE = /window\.open\("([^"]+)"\)/;
 
   function signal(url) {
-    if (url) {
+    // Only signal things that look like real download URLs, so a stray
+    // window.open(...) in some unrelated script can't poison the channel.
+    if (url && /^https?:\/\//.test(url)) {
       document.title = SENTINEL + url;
     }
   }
@@ -25,7 +27,6 @@
 
   // Fallback: if the page actually calls window.open, capture it directly
   // and suppress the popup.
-  var origOpen = window.open;
   window.open = function (url) {
     signal(url);
     return null;

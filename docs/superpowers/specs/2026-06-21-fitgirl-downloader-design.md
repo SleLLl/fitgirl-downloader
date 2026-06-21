@@ -119,6 +119,20 @@ restart (resume from where it stopped).
 4. **Turnstile not solved automatically:** fallback to showing the window for
    manual solve.
 
+## Plan A hardening follow-ups (deferred to Plan B)
+
+These were surfaced by the Plan A code review and are non-blocking for the
+extraction milestone, but should be addressed before Plan B consumes the
+resolved links programmatically:
+
+- **Stale-title race:** the extractor currently de-dups by comparing each
+  resolved direct URL against the previous one (`exclude`). Replace with a
+  per-navigation nonce baked into the sentinel (`FFLINK::<seq>::<url>`) so the
+  title channel is race-free even when consecutive parts resolve to equal URLs.
+- **Shared HTTP client / cookies:** `fetch_parts` builds a fresh stateless
+  `reqwest::Client` per call. Plan B's download engine needs a shared client
+  with the WebView's cookie store + User-Agent (this is Risk #1).
+
 ## Testing Strategy
 
 - **Rust unit tests (no network):** page parsers against saved HTML fixtures;
