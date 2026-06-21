@@ -69,3 +69,9 @@ fresh morning one) can read this to know exactly where things stand and continue
   user resumes; remember folder + concurrency. NEXT: write B2 plan, then execute
   (db module → manager integration → commands/startup → settings UI + Resume all),
   review, merge. Then C (showcase).
+- B2 plan written (`docs/.../2026-06-21-plan-b2-durability.md`); executing INLINE.
+  Task 1 DONE: `src-tauri/src/db/mod.rs` rusqlite module (jobs+settings CRUD,
+  in-memory tests) + dep (`4cbad1d`), 15 Rust tests green. NEXT B2 tasks:
+  T2 manager persist/restore + settings-driven concurrency, T3 settings commands
+  + startup DB wiring (app_data_dir), T4 frontend settings panel + persisted
+  folder + Resume all, T5 manual restart verify (user).
