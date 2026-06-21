@@ -1,22 +1,15 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
-
-vi.mock("@/lib/download", async () => {
-  const actual = await vi.importActual<typeof import("@/lib/download")>(
-    "@/lib/download"
-  );
-  return {
-    ...actual,
-    listDownloads: vi.fn(() => Promise.resolve([])),
-    onDownloadProgress: vi.fn(() => Promise.resolve(() => {})),
-  };
-});
-
+import { useAppStore } from "@/store/useAppStore";
 import Downloads from "./Downloads";
 
+beforeEach(() => {
+  useAppStore.setState({ downloads: {} });
+});
+
 describe("Downloads page", () => {
-  it("shows an empty state with no downloads", async () => {
+  it("shows an empty state with no downloads", () => {
     render(<Downloads />);
-    expect(await screen.findByText(/no downloads yet/i)).toBeInTheDocument();
+    expect(screen.getByText(/no downloads yet/i)).toBeInTheDocument();
   });
 });

@@ -1,40 +1,22 @@
-import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   cancelDownload,
   formatBytes,
   formatSpeed,
-  listDownloads,
-  onDownloadProgress,
   pauseDownload,
   resumeDownload,
-  type DownloadItem,
 } from "@/lib/download";
+import { useAppStore } from "@/store/useAppStore";
 import "./Downloads.css";
 
 export default function Downloads() {
-  const [items, setItems] = useState<Record<string, DownloadItem>>({});
-
-  useEffect(() => {
-    listDownloads().then((list) =>
-      setItems(Object.fromEntries(list.map((i) => [i.id, i])))
-    );
-    const un = onDownloadProgress((item) =>
-      setItems((prev) => ({ ...prev, [item.id]: item }))
-    );
-    return () => {
-      un.then((f) => f());
-    };
-  }, []);
-
+  const items = useAppStore((s) => s.downloads);
   const rows = Object.values(items);
 
   return (
     <div className="downloads-page">
       <h2 className="downloads-title">Downloads ({rows.length})</h2>
-      {rows.length === 0 && (
-        <p className="downloads-empty">No downloads yet.</p>
-      )}
+      {rows.length === 0 && <p className="downloads-empty">No downloads yet.</p>}
       {rows.map((it) => {
         const pct =
           it.totalBytes > 0
@@ -64,7 +46,10 @@ export default function Downloads() {
               {(it.status === "downloading" ||
                 it.status === "paused" ||
                 it.status === "queued") && (
-                <Button variant="destructive" onClick={() => cancelDownload(it.id)}>
+                <Button
+                  variant="destructive"
+                  onClick={() => cancelDownload(it.id)}
+                >
                   Cancel
                 </Button>
               )}
