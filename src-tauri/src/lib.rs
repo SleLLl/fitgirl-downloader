@@ -1,4 +1,5 @@
 mod commands;
+mod db;
 mod downloader;
 mod extractor;
 mod scraper;
