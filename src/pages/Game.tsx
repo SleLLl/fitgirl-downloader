@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -21,6 +21,21 @@ function partStatusClass(status: ExtractProgress["status"]): string {
   return "part-status--pending";
 }
 
+function statusText(status: ExtractProgress["status"]): string {
+  switch (status) {
+    case "processing":
+      return "working…";
+    case "needs_captcha":
+      return "solve the captcha in the opened window";
+    case "done":
+      return "done";
+    case "failed":
+      return "failed";
+    case "cancelled":
+      return "cancelled";
+  }
+}
+
 export default function Game() {
   const [url, setUrl] = useState(
     "https://fitgirl-repacks.site/grand-theft-auto-v/"
@@ -29,16 +44,14 @@ export default function Game() {
   const [parts, setParts] = useState<Part[]>([]);
   const [busy, setBusy] = useState(false);
   const [results, setResults] = useState<Record<string, ExtractProgress>>({});
+  const cancelledRef = useRef(false);
 
   useEffect(() => {
     const un = onExtractProgress((p) => {
       setResults((prev) => ({ ...prev, [p.sourceUrl]: p }));
-      setStatus(
-        `Extracting ${p.index + 1}/${p.total} — ${p.status}` +
-          (p.status === "needs_captcha"
-            ? " — solve the captcha in the opened window"
-            : "")
-      );
+      // Don't let a trailing per-part event overwrite the final summary.
+      if (cancelledRef.current) return;
+      setStatus(`Part ${p.index + 1}/${p.total}: ${statusText(p.status)}`);
     });
     return () => {
       un.then((f) => f());
@@ -84,11 +97,12 @@ export default function Game() {
       setStatus("All selected parts already extracted.");
       return;
     }
+    cancelledRef.current = false;
     setBusy(true);
     setStatus(`Extracting ${pending.length} remaining part(s)…`);
     try {
       await extractLinks(pending);
-      setStatus("Extraction complete.");
+      setStatus(cancelledRef.current ? "Cancelled." : "Extraction complete.");
     } catch (e) {
       setStatus(`Error: ${String(e)}`);
     } finally {
@@ -97,6 +111,7 @@ export default function Game() {
   }
 
   async function onCancel() {
+    cancelledRef.current = true;
     setStatus("Cancelling…");
     try {
       await cancelExtraction();
@@ -108,11 +123,12 @@ export default function Game() {
   async function onRetryFailed() {
     const failed = failedSourceUrls(results);
     if (failed.length === 0) return;
+    cancelledRef.current = false;
     setBusy(true);
     setStatus(`Retrying ${failed.length} failed part(s)…`);
     try {
       await extractLinks(failed);
-      setStatus("Retry complete.");
+      setStatus(cancelledRef.current ? "Cancelled." : "Retry complete.");
     } catch (e) {
       setStatus(`Error: ${String(e)}`);
     } finally {
