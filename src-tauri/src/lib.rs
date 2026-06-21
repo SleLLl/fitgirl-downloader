@@ -12,10 +12,12 @@ fn greet(name: &str) -> String {
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .manage(extractor::ExtractorState::default())
         .invoke_handler(tauri::generate_handler![
             greet,
             commands::fetch_parts,
-            extractor::extract_links
+            extractor::extract_links,
+            extractor::cancel_extraction
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
