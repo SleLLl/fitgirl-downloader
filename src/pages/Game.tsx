@@ -11,6 +11,7 @@ import {
 } from "@/lib/api";
 import { failedSourceUrls } from "@/lib/extract";
 import { filenameFromUrl } from "@/lib/format";
+import { buildRequests, pickDownloadDir, startDownloads } from "@/lib/download";
 import "./Game.css";
 
 type Part = { url: string; checked: boolean };
@@ -136,6 +137,18 @@ export default function Game() {
     }
   }
 
+  async function onDownloadAll() {
+    const reqs = buildRequests(results);
+    if (reqs.length === 0) {
+      setStatus("No resolved links to download yet.");
+      return;
+    }
+    const dir = await pickDownloadDir();
+    if (!dir) return;
+    await startDownloads(reqs, dir);
+    setStatus(`Queued ${reqs.length} download(s) into ${dir}.`);
+  }
+
   function toggle(idx: number) {
     setParts((prev) =>
       prev.map((p, i) => (i === idx ? { ...p, checked: !p.checked } : p))
@@ -150,7 +163,7 @@ export default function Game() {
   const extractLabel = hasResumed ? "Continue" : "Extract selected";
 
   return (
-    <main className="game-page dark">
+    <main className="game-page">
       <h1 className="game-title">FitGirl Downloader — Extract</h1>
 
       <div className="url-row">
@@ -212,6 +225,9 @@ export default function Game() {
             onClick={() => navigator.clipboard.writeText(directLinks.join("\n"))}
           >
             Copy all
+          </Button>
+          <Button variant="secondary" onClick={onDownloadAll}>
+            Download all
           </Button>
         </div>
       )}

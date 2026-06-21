@@ -1,0 +1,27 @@
+.downloads-page {
+  @apply space-y-3;
+}
+.downloads-title {
+  @apply text-lg font-semibold;
+}
+.downloads-empty {
+  @apply text-sm text-muted-foreground;
+}
+.dl-row {
+  @apply border border-border rounded-md p-3 space-y-2;
+}
+.dl-name {
+  @apply text-sm font-mono;
+}
+.dl-bar {
+  @apply h-2 w-full bg-muted rounded;
+}
+.dl-bar-fill {
+  @apply h-2 bg-green-500 rounded;
+}
+.dl-meta {
+  @apply text-xs text-muted-foreground;
+}
+.dl-actions {
+  @apply flex gap-2;
+}
