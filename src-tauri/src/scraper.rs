@@ -1,6 +1,11 @@
 use scraper::{Html, Selector};
 use url::Url;
 
+/// Drop a single trailing slash so `.../abc` and `.../abc/` dedup together.
+fn normalize_part_url(href: &str) -> String {
+    href.strip_suffix('/').unwrap_or(href).to_string()
+}
+
 /// Collect unique `fuckingfast.co` href links from a game page, preserving order.
 pub fn parse_part_links(html: &str) -> Vec<String> {
     let doc = Html::parse_document(html);
@@ -9,7 +14,7 @@ pub fn parse_part_links(html: &str) -> Vec<String> {
     for el in doc.select(&selector) {
         if let Some(href) = el.value().attr("href") {
             if href.contains("fuckingfast.co") {
-                let owned = href.to_string();
+                let owned = normalize_part_url(href);
                 if !links.contains(&owned) {
                     links.push(owned);
                 }
@@ -80,6 +85,16 @@ mod tests {
                 "https://fuckingfast.co/abc123#Game.part1.rar".to_string(),
                 "https://fuckingfast.co/def456#Game.part2.rar".to_string(),
             ]
+        );
+    }
+
+    #[test]
+    fn normalizes_trailing_slash_before_dedup() {
+        let html = r#"<a href="https://fuckingfast.co/abc">a</a>
+                      <a href="https://fuckingfast.co/abc/">b</a>"#;
+        assert_eq!(
+            parse_part_links(html),
+            vec!["https://fuckingfast.co/abc".to_string()]
         );
     }
 }
