@@ -3,7 +3,7 @@ import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 
 export type FetchResult = { valid: boolean; parts: string[] };
 
-export type ExtractStatus = "processing" | "needs_captcha" | "done" | "failed";
+export type ExtractStatus = "needs_click" | "done" | "failed";
 
 export type ExtractProgress = {
   index: number;

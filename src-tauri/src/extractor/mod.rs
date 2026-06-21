@@ -12,12 +12,14 @@ pub struct ExtractProgress {
     pub index: usize,
     pub total: usize,
     pub source_url: String,
-    /// "processing" | "needs_captcha" | "done" | "failed"
+    /// "processing" | "needs_click" | "done" | "failed"
     pub status: String,
     pub direct_url: Option<String>,
 }
 
-/// Get the existing hidden extractor window, or create it pointing at `first`.
+/// Get the existing extractor window, or create it (visible) pointing at `first`.
+/// The window is shown so the user can click DOWNLOAD on the fuckingfast page;
+/// the injected script captures the resulting URL.
 fn ensure_window(app: &AppHandle, first: &str) -> Result<WebviewWindow, String> {
     if let Some(w) = app.get_webview_window("extractor") {
         return Ok(w);
@@ -25,14 +27,16 @@ fn ensure_window(app: &AppHandle, first: &str) -> Result<WebviewWindow, String> 
     let url = Url::parse(first).map_err(|e| e.to_string())?;
     WebviewWindowBuilder::new(app, "extractor", WebviewUrl::External(url))
         .initialization_script(INJECT)
-        .visible(false)
-        .title("extractor")
+        .visible(true)
+        .title("FitGirl Downloader — click DOWNLOAD")
+        .inner_size(900.0, 700.0)
         .build()
         .map_err(|e| e.to_string())
 }
 
-/// Poll the window title until it carries a sentinel link or the timeout passes.
-/// Ignores a link equal to `exclude` (stale title from the previous part).
+/// Poll the window URL until the injected script rewrites it to carry the
+/// captured `?fflink=<url>`, or the timeout passes. Ignores a link equal to
+/// `exclude` (stale URL from the previous part before navigation commits).
 async fn wait_for_link(
     win: &WebviewWindow,
     timeout: Duration,
@@ -40,8 +44,8 @@ async fn wait_for_link(
 ) -> Option<String> {
     let start = Instant::now();
     while start.elapsed() < timeout {
-        if let Ok(title) = win.title() {
-            if let Some(link) = parse_sentinel_title(&title) {
+        if let Ok(current) = win.url() {
+            if let Some(link) = parse_fflink_url(current.as_str()) {
                 if exclude != Some(link.as_str()) {
                     return Some(link);
                 }
@@ -62,46 +66,32 @@ pub async fn extract_links(app: AppHandle, urls: Vec<String>) -> Result<Vec<Stri
         return Ok(vec![]);
     }
     let win = ensure_window(&app, &urls[0])?;
+    let _ = win.show();
+    let _ = win.set_focus();
     let mut resolved: Vec<String> = Vec::new();
     let mut last: Option<String> = None;
 
     for (i, src) in urls.iter().enumerate() {
-        let _ = app.emit(
-            "extract-progress",
-            ExtractProgress {
-                index: i,
-                total,
-                source_url: src.clone(),
-                status: "processing".into(),
-                direct_url: None,
-            },
-        );
-
         if let Ok(u) = Url::parse(src) {
             let _ = win.navigate(u);
         }
         // Let the new document begin loading so we don't read a stale title.
         tokio::time::sleep(Duration::from_millis(1200)).await;
 
-        // Automatic attempt (Turnstile usually clears on its own).
-        let mut link = wait_for_link(&win, Duration::from_secs(25), last.as_deref()).await;
+        let _ = app.emit(
+            "extract-progress",
+            ExtractProgress {
+                index: i,
+                total,
+                source_url: src.clone(),
+                status: "needs_click".into(),
+                direct_url: None,
+            },
+        );
 
-        // Fallback: show the window so the user can solve the challenge once.
-        if link.is_none() {
-            let _ = win.show();
-            let _ = app.emit(
-                "extract-progress",
-                ExtractProgress {
-                    index: i,
-                    total,
-                    source_url: src.clone(),
-                    status: "needs_captcha".into(),
-                    direct_url: None,
-                },
-            );
-            link = wait_for_link(&win, Duration::from_secs(120), last.as_deref()).await;
-            let _ = win.hide();
-        }
+        // The user clicks DOWNLOAD in the visible window; the injected script
+        // captures the URL and rewrites the window URL. Wait for it.
+        let link = wait_for_link(&win, Duration::from_secs(180), last.as_deref()).await;
 
         match link {
             Some(direct) => {
@@ -133,15 +123,18 @@ pub async fn extract_links(app: AppHandle, urls: Vec<String>) -> Result<Vec<Stri
         }
     }
 
+    let _ = win.hide();
     Ok(resolved)
 }
 
-/// Prefix the injected page script writes into `document.title` to signal Rust.
-pub const SENTINEL: &str = "FFLINK::";
-
-/// Extract the direct URL from a window title if it carries the sentinel.
-pub fn parse_sentinel_title(title: &str) -> Option<String> {
-    title.strip_prefix(SENTINEL).map(|rest| rest.to_string())
+/// Extract the captured download URL from the extractor window's current URL,
+/// which the injected script rewrites to `<page>?fflink=<encoded-url>`.
+pub fn parse_fflink_url(current_url: &str) -> Option<String> {
+    let parsed = Url::parse(current_url).ok()?;
+    parsed
+        .query_pairs()
+        .find(|(k, _)| k == "fflink")
+        .map(|(_, v)| v.into_owned())
 }
 
 #[cfg(test)]
@@ -149,16 +142,18 @@ mod tests {
     use super::*;
 
     #[test]
-    fn parses_sentinel_title() {
+    fn parses_fflink_query() {
         assert_eq!(
-            parse_sentinel_title("FFLINK::https://cdn.example/file.rar"),
-            Some("https://cdn.example/file.rar".to_string())
+            parse_fflink_url(
+                "https://fuckingfast.co/abc?fflink=https%3A%2F%2Fdl.fuckingfast.co%2Fdl%2FXYZ"
+            ),
+            Some("https://dl.fuckingfast.co/dl/XYZ".to_string())
         );
     }
 
     #[test]
-    fn ignores_non_sentinel_titles() {
-        assert_eq!(parse_sentinel_title("Just a normal page title"), None);
-        assert_eq!(parse_sentinel_title(""), None);
+    fn ignores_url_without_fflink() {
+        assert_eq!(parse_fflink_url("https://fuckingfast.co/abc"), None);
+        assert_eq!(parse_fflink_url("not a url"), None);
     }
 }

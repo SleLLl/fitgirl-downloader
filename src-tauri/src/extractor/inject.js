@@ -1,43 +1,47 @@
 // Injected into every fuckingfast.co page load in the extractor window.
-// Finds the direct download URL and signals Rust by writing it into
-// document.title with the FFLINK:: sentinel prefix.
+//
+// The direct download URL is NOT in the static HTML — it appears only when the
+// DOWNLOAD button is clicked (its handler calls window.open(<directUrl>)). We
+// hook window.open at runtime to capture it, then transport it to Rust by
+// rewriting our own URL to `<page>?fflink=<encoded>`. Rust reads window.url();
+// unlike document.title, navigations are always reflected in the webview URL.
 (function () {
-  var SENTINEL = "FFLINK::";
-  var RE = /window\.open\("([^"]+)"\)/;
+  var captured = null;
 
-  function signal(url) {
-    // Only signal things that look like real download URLs, so a stray
-    // window.open(...) in some unrelated script can't poison the channel.
-    if (url && /^https?:\/\//.test(url)) {
-      document.title = SENTINEL + url;
+  // A real download URL looks like a file or sits on the file host; ad popups
+  // (also opened via window.open) usually do neither. We act only on matches so
+  // the first "open ads" click can't poison the channel.
+  function looksLikeDownload(u) {
+    return (
+      /\.(rar|zip|7z|bin|exe|iso|part\d+)(\?|#|$)/i.test(u) ||
+      /fuckingfast/i.test(u)
+    );
+  }
+
+  function capture(url) {
+    if (captured || !url) return;
+    if (/^https?:\/\//.test(url) && looksLikeDownload(url)) {
+      captured = url;
+      // Transport to Rust via the webview URL (reliable, unlike the title).
+      window.location.search = "fflink=" + encodeURIComponent(url);
     }
   }
 
-  function scan() {
-    try {
-      var html = document.documentElement.outerHTML;
-      var m = RE.exec(html);
-      if (m && m[1]) {
-        signal(m[1]);
-        return true;
-      }
-    } catch (e) {}
-    return false;
-  }
-
-  // Fallback: if the page actually calls window.open, capture it directly
-  // and suppress the popup.
+  // Runtime window.open hook — captures any quote style / dynamically built URL
+  // and suppresses the popup (returns null) so ad windows don't spawn.
   window.open = function (url) {
-    signal(url);
+    capture(url);
     return null;
   };
 
-  if (!scan()) {
-    var iv = setInterval(function () {
-      if (scan()) clearInterval(iv);
-    }, 300);
-    setTimeout(function () {
-      clearInterval(iv);
-    }, 60000);
-  }
+  // Capture-phase click listener — if the DOWNLOAD control is an anchor, read
+  // where it points even when it navigates in-window.
+  document.addEventListener(
+    "click",
+    function (e) {
+      var a = e.target && e.target.closest ? e.target.closest("a[href]") : null;
+      if (a) capture(a.href);
+    },
+    true
+  );
 })();
