@@ -37,4 +37,11 @@ fresh morning one) can read this to know exactly where things stand and continue
 
 - B1 implemented (segment engine, manager, dashboard, tabs, Download all) + 3 UX
   fixes (tab-state preservation, per-part download, gated Download all). Tests
-  green (13 Rust + 10 vitest). Pending: final review + merge (doing now).
+  green (13 Rust + 10 vitest).
+- B1 final review done (opus). Fixed the one Important finding: pause/resume
+  double-write race → per-attempt stop flag (`cc953b9`). Minor findings (#2–#5:
+  cancel temp-delete race, SEGMENTS coupling in cancel cleanup, speed-throttle
+  noise, missing aggregate progress line) deferred to B2/polish.
+- **B1 MERGED to master (`cc953b9`), branch deleted. DONE.**
+- NEXT: B1.5 — frontend refactor (Zustand store + split Game.tsx + per-part
+  download indicator without tab switch). Then B2, then C.
