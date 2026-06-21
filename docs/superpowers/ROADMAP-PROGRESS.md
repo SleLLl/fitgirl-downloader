@@ -61,5 +61,11 @@ fresh morning one) can read this to know exactly where things stand and continue
   to master (`5709cdf`), branch deleted. DONE.** (Still worth a user live-verify
   of the UI in the morning.) Two deferred Minors: PartRow filename-keyed lookup,
   per-row subscribe-to-whole-downloads — fine at this scale.
-- NEXT: B2 — durability (sqlx SQLite job persistence + resume across app restart
-  + remembered settings: download folder, concurrency).
+- B2 STARTED on `feat/plan-b2-durability`. Spec written (`b3be880`):
+  `docs/.../2026-06-21-plan-b2-durability-design.md`. DECISION: use `rusqlite`
+  (not sqlx) — local-only, no compile-time DATABASE_URL; flagged for review.
+  Model: persist job metadata + settings in SQLite (app_data_dir); recompute
+  `downloaded` from .partN on load; restart → `downloading` jobs become `paused`,
+  user resumes; remember folder + concurrency. NEXT: write B2 plan, then execute
+  (db module → manager integration → commands/startup → settings UI + Resume all),
+  review, merge. Then C (showcase).
