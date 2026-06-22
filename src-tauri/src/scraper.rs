@@ -267,9 +267,66 @@ pub fn parse_game_details(html: &str, page_url: &str) -> GameDetails {
     }
 }
 
+/// Parse a FitGirl WordPress search-results page (`?s=...`) into cards: each is
+/// an `<article>` with a `.entry-title a` (title + game URL) and, optionally, a
+/// cover image. Articles without a title link are skipped; missing cover → "".
+pub fn parse_search(html: &str) -> Vec<Repack> {
+    let doc = Html::parse_document(html);
+    let article = Selector::parse("article").expect("valid selector");
+    let title_a = Selector::parse(".entry-title a[href]").expect("valid selector");
+    let img = Selector::parse("img").expect("valid selector");
+    let mut out = Vec::new();
+    for art in doc.select(&article) {
+        let link = match art.select(&title_a).next() {
+            Some(l) => l,
+            None => continue,
+        };
+        let page_url = match link.value().attr("href") {
+            Some(h) => h.to_string(),
+            None => continue,
+        };
+        let title = link.text().collect::<String>().trim().to_string();
+        if title.is_empty() {
+            continue;
+        }
+        let cover_url = art
+            .select(&img)
+            .find_map(|i| {
+                let src = i
+                    .value()
+                    .attr("data-src")
+                    .or_else(|| i.value().attr("src"))?;
+                if is_cover_image(src) {
+                    Some(src.to_string())
+                } else {
+                    None
+                }
+            })
+            .unwrap_or_default();
+        out.push(Repack {
+            title,
+            page_url,
+            cover_url,
+        });
+    }
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn parses_search_results_with_optional_cover() {
+        let html = include_str!("../tests/fixtures/search.html");
+        let r = parse_search(html);
+        assert_eq!(r.len(), 2);
+        assert_eq!(r[0].title, "Cyberpunk 2077");
+        assert_eq!(r[0].page_url, "https://fitgirl-repacks.site/cyberpunk-2077/");
+        assert_eq!(r[0].cover_url, "https://i.imageban.ru/cp.jpg");
+        assert_eq!(r[1].title, "No Cover Game");
+        assert_eq!(r[1].cover_url, "");
+    }
 
     #[test]
     fn parses_game_details() {

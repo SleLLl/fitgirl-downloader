@@ -1,8 +1,9 @@
 use serde::Serialize;
+use url::Url;
 
 use crate::scraper::{
-    fetch_html, parse_game_details, parse_part_links, parse_popular, validate_fitgirl_url,
-    GameDetails, Repack,
+    fetch_html, parse_game_details, parse_part_links, parse_popular, parse_search,
+    validate_fitgirl_url, GameDetails, Repack,
 };
 
 #[derive(Serialize)]
@@ -32,6 +33,22 @@ pub async fn scrape_popular() -> Result<Vec<Repack>, String> {
         .await
         .map_err(|e| e.to_string())?;
     Ok(parse_popular(&html))
+}
+
+/// Search the FitGirl catalog (`?s=query`) and return matching cards.
+#[tauri::command]
+pub async fn search_repacks(query: String) -> Result<Vec<Repack>, String> {
+    let trimmed = query.trim();
+    if trimmed.len() < 2 {
+        return Ok(vec![]);
+    }
+    let mut url = Url::parse("https://fitgirl-repacks.site/").map_err(|e| e.to_string())?;
+    url.query_pairs_mut().append_pair("s", trimmed);
+    let client = reqwest::Client::new();
+    let html = fetch_html(&client, url.as_str())
+        .await
+        .map_err(|e| e.to_string())?;
+    Ok(parse_search(&html))
 }
 
 /// Scrape a FitGirl game page into detail fields.

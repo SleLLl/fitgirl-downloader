@@ -37,6 +37,7 @@ pub fn run() {
             commands::fetch_parts,
             commands::scrape_popular,
             commands::scrape_game,
+            commands::search_repacks,
             extractor::extract_links,
             extractor::cancel_extraction,
             downloader::start_downloads,
