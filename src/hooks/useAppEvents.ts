@@ -5,7 +5,8 @@ import { getSettings } from "@/lib/settings";
 import { statusText } from "@/lib/format";
 import { useAppStore } from "@/store/useAppStore";
 
-/// Registers the app's Tauri event subscriptions exactly once (mounted in App),
+/// Registers the app's Tauri event subscriptions exactly once (mounted in the
+/// root Layout),
 /// funnelling extraction + download progress into the store. Seeds the current
 /// download list on mount.
 export function useAppEvents() {
