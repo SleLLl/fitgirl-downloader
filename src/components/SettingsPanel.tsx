@@ -1,3 +1,4 @@
+import { ChangeEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { useAppStore } from "@/store/useAppStore";
 import { setSetting } from "@/lib/settings";
@@ -28,6 +29,11 @@ export function SettingsPanel() {
     void setSetting(key, String(value));
   }
 
+  const handleFilesChange = (event: ChangeEvent<HTMLInputElement>) =>
+    update("file_concurrency", Number(event.target.value));
+  const handleSegmentsChange = (event: ChangeEvent<HTMLInputElement>) =>
+    update("segments", Number(event.target.value));
+
   return (
     <div className="settings-panel">
       <div className="settings-row">
@@ -46,9 +52,7 @@ export function SettingsPanel() {
               min={1}
               max={8}
               value={settings.fileConcurrency}
-              onChange={(e) =>
-                update("file_concurrency", Number(e.target.value))
-              }
+              onChange={handleFilesChange}
               className="settings-input"
             />
             <span className="settings-note">(applies after restart)</span>
@@ -60,7 +64,7 @@ export function SettingsPanel() {
               min={1}
               max={16}
               value={settings.segments}
-              onChange={(e) => update("segments", Number(e.target.value))}
+              onChange={handleSegmentsChange}
               className="settings-input"
             />
           </div>

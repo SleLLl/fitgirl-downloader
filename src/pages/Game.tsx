@@ -8,6 +8,7 @@ import "./Game.css";
 export default function Game() {
   const status = useAppStore((s) => s.status);
   const hasParts = useAppStore((s) => s.parts.length > 0);
+
   return (
     <main className="game-page">
       <h1 className="game-title">FitGirl Downloader — Extract</h1>

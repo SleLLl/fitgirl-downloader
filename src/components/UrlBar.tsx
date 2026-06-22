@@ -1,3 +1,4 @@
+import { ChangeEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAppStore } from "@/store/useAppStore";
@@ -8,11 +9,15 @@ export function UrlBar() {
   const setUrl = useAppStore((s) => s.setUrl);
   const busy = useAppStore((s) => s.busy);
   const { onFetch } = useExtraction();
+
+  const handleChange = (event: ChangeEvent<HTMLInputElement>) =>
+    setUrl(event.target.value);
+
   return (
     <div className="url-row">
       <Input
         value={url}
-        onChange={(e) => setUrl(e.target.value)}
+        onChange={handleChange}
         placeholder="https://fitgirl-repacks.site/<game>/"
       />
       <Button onClick={onFetch} disabled={busy}>

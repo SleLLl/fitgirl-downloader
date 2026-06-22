@@ -8,9 +8,12 @@ export function ExtractControls() {
   const parts = useAppStore((s) => s.parts);
   const results = useAppStore((s) => s.results);
   const { onExtract, onCancel, onRetryFailed } = useExtraction();
-  const hasResumed = parts.some((p) => results[p.url]?.status === "done");
+
+  const hasResumed = parts.some((part) => results[part.url]?.status === "done");
   const extractLabel = hasResumed ? "Continue" : "Extract selected";
   const failed = failedSourceUrls(results);
+  const hasFailed = !busy && failed.length > 0;
+
   return (
     <div className="controls-row">
       <Button onClick={onExtract} disabled={busy}>
@@ -21,7 +24,7 @@ export function ExtractControls() {
           Cancel
         </Button>
       )}
-      {!busy && failed.length > 0 && (
+      {hasFailed && (
         <Button variant="secondary" onClick={onRetryFailed}>
           Retry failed ({failed.length})
         </Button>

@@ -8,28 +8,27 @@ export function LinksPanel() {
   const results = useAppStore((s) => s.results);
   const busy = useAppStore((s) => s.busy);
   const { onDownloadAll } = useDownloads();
+
   const directLinks = parts
-    .map((p) => results[p.url]?.directUrl)
-    .filter((x): x is string => !!x);
+    .map((part) => results[part.url]?.directUrl)
+    .filter((link): link is string => !!link);
   const downloadable = buildRequests(results);
+  const canDownloadAll = !busy && downloadable.length > 0;
+
+  const handleCopy = () =>
+    navigator.clipboard.writeText(directLinks.join("\n"));
+
   if (directLinks.length === 0) return null;
+
   return (
     <div className="links-section">
       <h2 className="links-heading">Direct links ({directLinks.length})</h2>
-      <textarea
-        readOnly
-        className="links-output"
-        value={directLinks.join("\n")}
-      />
-      <Button
-        onClick={() => navigator.clipboard.writeText(directLinks.join("\n"))}
-      >
-        Copy all
-      </Button>
+      <textarea readOnly className="links-output" value={directLinks.join("\n")} />
+      <Button onClick={handleCopy}>Copy all</Button>
       <Button
         variant="secondary"
         onClick={onDownloadAll}
-        disabled={busy || downloadable.length === 0}
+        disabled={!canDownloadAll}
       >
         Download all ({downloadable.length})
       </Button>

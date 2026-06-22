@@ -4,46 +4,50 @@ import Game from "@/pages/Game";
 import Downloads from "@/pages/Downloads";
 import Settings from "@/pages/Settings";
 import { useAppEvents } from "@/hooks/useAppEvents";
-import { useAppStore } from "@/store/useAppStore";
+import { useAppStore, type Tab } from "@/store/useAppStore";
+
+const ACTIVE_STATUSES = ["downloading", "queued", "paused"];
 
 function App() {
   const tab = useAppStore((s) => s.tab);
   const setTab = useAppStore((s) => s.setTab);
-  useAppEvents();
-  const active = useAppStore(
+  const activeCount = useAppStore(
     (s) =>
       Object.values(s.downloads).filter((d) =>
-        ["downloading", "queued", "paused"].includes(d.status)
+        ACTIVE_STATUSES.includes(d.status)
       ).length
   );
+
+  useAppEvents();
+
+  const selectTab = (target: Tab) => () => setTab(target);
+  const variantFor = (target: Tab) => (tab === target ? "default" : "secondary");
+  const downloadsLabel =
+    activeCount > 0 ? `Downloads (${activeCount})` : "Downloads";
+
   return (
     <main className="dark min-h-screen bg-background text-foreground">
       <nav className="flex gap-2 p-3 border-b border-border">
-        <Button
-          variant={tab === "browse" ? "default" : "secondary"}
-          onClick={() => setTab("browse")}
-        >
+        <Button variant={variantFor("browse")} onClick={selectTab("browse")}>
           Browse
         </Button>
-        <Button
-          variant={tab === "extract" ? "default" : "secondary"}
-          onClick={() => setTab("extract")}
-        >
+        <Button variant={variantFor("extract")} onClick={selectTab("extract")}>
           Extract
         </Button>
         <Button
-          variant={tab === "downloads" ? "default" : "secondary"}
-          onClick={() => setTab("downloads")}
+          variant={variantFor("downloads")}
+          onClick={selectTab("downloads")}
         >
-          Downloads{active > 0 ? ` (${active})` : ""}
+          {downloadsLabel}
         </Button>
         <Button
-          variant={tab === "settings" ? "default" : "secondary"}
-          onClick={() => setTab("settings")}
+          variant={variantFor("settings")}
+          onClick={selectTab("settings")}
         >
           Settings
         </Button>
       </nav>
+
       <div className="p-4">
         <div hidden={tab !== "browse"}>
           <Browse />
