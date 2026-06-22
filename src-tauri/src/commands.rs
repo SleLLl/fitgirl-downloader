@@ -1,7 +1,8 @@
 use serde::Serialize;
 
 use crate::scraper::{
-    fetch_html, parse_part_links, parse_popular, validate_fitgirl_url, Repack,
+    fetch_html, parse_game_details, parse_part_links, parse_popular, validate_fitgirl_url,
+    GameDetails, Repack,
 };
 
 #[derive(Serialize)]
@@ -31,4 +32,15 @@ pub async fn scrape_popular() -> Result<Vec<Repack>, String> {
         .await
         .map_err(|e| e.to_string())?;
     Ok(parse_popular(&html))
+}
+
+/// Scrape a FitGirl game page into detail fields.
+#[tauri::command]
+pub async fn scrape_game(url: String) -> Result<GameDetails, String> {
+    if !validate_fitgirl_url(&url) {
+        return Err("Not an official fitgirl-repacks.site URL.".into());
+    }
+    let client = reqwest::Client::new();
+    let html = fetch_html(&client, &url).await.map_err(|e| e.to_string())?;
+    Ok(parse_game_details(&html, &url))
 }

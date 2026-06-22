@@ -36,6 +36,7 @@ pub fn run() {
             greet,
             commands::fetch_parts,
             commands::scrape_popular,
+            commands::scrape_game,
             extractor::extract_links,
             extractor::cancel_extraction,
             downloader::start_downloads,
