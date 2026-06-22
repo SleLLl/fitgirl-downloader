@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import Browse from "@/pages/Browse";
 import Game from "@/pages/Game";
 import Downloads from "@/pages/Downloads";
+import Settings from "@/pages/Settings";
 import { useAppEvents } from "@/hooks/useAppEvents";
 import { useAppStore } from "@/store/useAppStore";
 
@@ -36,6 +37,12 @@ function App() {
         >
           Downloads{active > 0 ? ` (${active})` : ""}
         </Button>
+        <Button
+          variant={tab === "settings" ? "default" : "secondary"}
+          onClick={() => setTab("settings")}
+        >
+          Settings
+        </Button>
       </nav>
       <div className="p-4">
         <div hidden={tab !== "browse"}>
@@ -46,6 +53,9 @@ function App() {
         </div>
         <div hidden={tab !== "downloads"}>
           <Downloads />
+        </div>
+        <div hidden={tab !== "settings"}>
+          <Settings />
         </div>
       </div>
     </main>

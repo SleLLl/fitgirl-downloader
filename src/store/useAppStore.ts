@@ -4,7 +4,7 @@ import type { DownloadItem } from "@/lib/download";
 import type { Settings } from "@/lib/settings";
 
 export type Part = { url: string; checked: boolean };
-export type Tab = "browse" | "extract" | "downloads";
+export type Tab = "browse" | "extract" | "downloads" | "settings";
 
 type AppState = {
   url: string;

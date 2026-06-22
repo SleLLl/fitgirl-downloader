@@ -7,7 +7,6 @@ import {
   resumeDownload,
 } from "@/lib/download";
 import { resumeAll } from "@/lib/settings";
-import { SettingsPanel } from "@/components/SettingsPanel";
 import { useAppStore } from "@/store/useAppStore";
 import "./Downloads.css";
 
@@ -20,7 +19,6 @@ export default function Downloads() {
 
   return (
     <div className="downloads-page">
-      <SettingsPanel />
       <div className="downloads-header">
         <h2 className="downloads-title">Downloads ({rows.length})</h2>
         {pausedCount > 0 && (
