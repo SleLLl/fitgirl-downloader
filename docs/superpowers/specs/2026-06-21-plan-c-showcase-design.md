@@ -1,79 +1,90 @@
 # Plan C — Repack Showcase — Design Spec
 
-**Date:** 2026-06-21
-**Status:** Approved (autonomous — user authorized; decisions documented for review)
+**Date:** 2026-06-21 (revised 2026-06-22 to use the real popular-repacks page)
+**Status:** Approved (autonomous — user authorized; user pointed to the popular page)
 **Builds on:** B1/B1.5/B2, merged to `master`.
 
 ## Goal
 
-A "Browse" tab that scrapes the FitGirl homepage for recent repacks and shows them
-as a grid of cards (cover image + title). Clicking a card loads that game's page
-URL into the Extract tab so the user goes straight from browsing to extracting.
+A "Browse" tab that scrapes FitGirl's **popular repacks** page and shows them as a
+grid of cards (cover image + title). Clicking a card loads that game's page URL
+into the Extract tab so the user goes straight from browsing to extracting.
 
-## Decisions (autonomous)
+## Source (confirmed by fetching the page)
 
-- **Source = the homepage's recent posts, paginated.** FitGirl is WordPress; the
-  homepage lists recent repacks as `<article>` posts, ~a handful per page. Rather
-  than hammer the site for an exact "top 50" on load, scrape **one page per
-  request** and let the UI "Load more" to accumulate (reaches 50+ as the user
-  scrolls). Page 1 loads on first visit.
-- **Parsing is defensive and isolated** in one function (`parse_repacks`) so a
-  markup change is a one-place fix (same discipline as the existing parsers). Each
-  card needs: `title`, `pageUrl` (the post's permalink), `coverUrl` (first content
-  image). Posts missing any of the three are skipped.
-- **Covers are loaded directly** by the webview from their remote URLs (`<img
-  src>`); no download/caching in v1.
+`https://fitgirl-repacks.site/popular-repacks/` is a single WordPress page whose
+content is a grid of ~170 popular games. Each game is an anchor wrapping a cover
+image:
+
+```html
+<a href="https://fitgirl-repacks.site/007-first-light/" class="bump-view" data-bump-view="tp">
+  <img width="150" height="200"
+       src="https://i0.wp.com/i1.imageban.ru/out/.../cover.jpg?resize=150%2C200&ssl=1"
+       alt="007 First Light" .../>
+</a>
+```
+
+- `href` = the game page URL (on `fitgirl-repacks.site`, single slug).
+- the wrapped `<img>`'s `alt` = the game title, `src` = the cover thumbnail.
+- text nav links on the page ("Top 50 of the Month", etc.) have **no** wrapped
+  `<img>`, so selecting anchors that contain an image naturally excludes them.
+
+## Decisions
+
+- **One fetch, no pagination.** The page already lists all ~170 popular games in
+  popularity order, so a single `scrape_popular()` returns everything; the grid
+  renders them with native `loading="lazy"` images. (Simpler than the earlier
+  homepage+pagination idea.)
+- **Parsing isolated + defensive** in one function (`parse_popular`): select each
+  anchor that links to a game page and wraps an `<img>`; take the img `alt` as the
+  title and `src` as the cover. Skip anchors without an image or a non-empty alt.
+- **Covers load directly** from their remote URLs (`<img src>`); no caching.
 - **Navigation via the store.** The active tab moves into the Zustand store
-  (`tab` + `setTab`) so a card click can do `setUrl(pageUrl); setTab("extract")`.
-  `App` reads/sets `tab` from the store (3 tabs: Browse / Extract / Downloads).
-- **Validation reuse:** the scraped `pageUrl` is on `fitgirl-repacks.site`, so the
-  existing `validate_fitgirl_url` accepts it; extraction works unchanged.
+  (`tab` + `setTab`) so a card click does `setUrl(pageUrl); setTab("extract")`.
+  `App` reads/sets `tab` (3 tabs: Browse / Extract / Downloads).
+- **Validation reuse:** scraped `pageUrl` is on `fitgirl-repacks.site`, so the
+  existing extraction flow accepts it unchanged.
 
 ## Architecture
 
 ### Rust
-- `src-tauri/src/scraper.rs` — add:
-  - `struct Repack { title, page_url, cover_url }` (serializable, camelCase).
-  - `parse_repacks(html: &str) -> Vec<Repack>`: select `article`; per article, title
-    + permalink from the title link (`.entry-title a[href]`), cover from the first
-    `img` in the post (`img[src]`, preferring `data-src`/`src`). Skip incomplete.
-- `src-tauri/src/commands.rs` — `scrape_homepage(page: u32) -> Result<Vec<Repack>, String>`:
-  fetch `https://fitgirl-repacks.site/` (page 1) or `…/page/{page}/` (page ≥ 2) with
-  the browser UA, parse, return.
+- `src-tauri/src/scraper.rs`:
+  - `struct Repack { title, page_url, cover_url }` (`#[serde(rename_all="camelCase")]`).
+  - `parse_popular(html: &str) -> Vec<Repack>`: select `a[href]` having a descendant
+    `img`; href must match a fitgirl game page; title = img `alt` (trimmed,
+    non-empty), cover = img `src` (prefer `data-src` then `src`). Skip incomplete.
+- `src-tauri/src/commands.rs` — `scrape_popular() -> Result<Vec<Repack>, String>`:
+  fetch `https://fitgirl-repacks.site/popular-repacks/` with the browser UA, parse.
 
 ### React
-- `src/lib/showcase.ts` — `Repack` type + `scrapeHomepage(page): Promise<Repack[]>`.
-- `src/store/useAppStore.ts` — add `tab: Tab` (`"browse"|"extract"|"downloads"`) +
-  `setTab`. Default `"browse"`.
-- `src/pages/Browse.tsx` — loads page 1 on mount; a responsive grid of cards
-  (cover `<img>` + title); a "Load more" button that fetches the next page and
-  appends; clicking a card sets `url` + switches to `extract`. Local state holds
-  `repacks`, `page`, `loading`.
-- `src/pages/Browse.css` — grid + card classes (semantic, `@apply`).
-- `src/App.tsx` — 3 tabs driven by `store.tab`; all three pages stay mounted
-  (`hidden`) to preserve state.
+- `src/lib/showcase.ts` — `Repack` type + `scrapePopular(): Promise<Repack[]>`.
+- `src/store/useAppStore.ts` — `tab: Tab` (`"browse"|"extract"|"downloads"`,
+  default `"browse"`) + `setTab`.
+- `src/pages/Browse.tsx` — loads popular on mount; responsive grid of cards
+  (lazy cover `<img>` + title); click a card → `setUrl(pageUrl)` + `setTab("extract")`.
+  Local state: `repacks`, `loading`, `error` (+ Retry).
+- `src/pages/Browse.css` — grid + card classes (`@apply`).
+- `src/App.tsx` — 3 tabs driven by `store.tab`; all pages mounted (`hidden`).
 
 ## Data Flow
-App mounts → Browse (default tab) loads homepage page 1 → grid of cards. Click →
-`setUrl(pageUrl)` + `setTab("extract")` → Extract tab shows the URL prefilled →
-user clicks Fetch links → existing extraction flow.
+App mounts → Browse (default tab) calls `scrapePopular()` → grid of ~170 cards →
+click → `setUrl(pageUrl)` + `setTab("extract")` → Extract tab prefilled → Fetch.
 
 ## Error Handling
-- Fetch/parse failure → Browse shows an error line + a Retry button; never crashes.
-- A post missing title/url/cover is skipped (parser).
-- Broken cover image → the `<img>` simply fails to render (acceptable); CSS gives
-  the card a fixed aspect box so layout holds.
+- Fetch/parse failure → Browse shows an error line + Retry; never crashes.
+- A post missing image/alt is skipped by the parser.
+- Broken cover image → the `<img>` fails to render; CSS fixes the card box so the
+  grid layout holds.
 
 ## Testing Strategy
-- **Rust unit (fixture):** `parse_repacks` against a saved homepage snippet with 2
-  well-formed articles + 1 incomplete → returns the 2, in order, with correct
-  title/url/cover.
-- **Frontend (vitest):** `Browse` renders the grid from a mocked `scrapeHomepage`
-  (one repack → its title appears); empty/loading states render.
-- **Manual:** open Browse → cards load with covers → "Load more" appends →
-  clicking a card lands on Extract with the URL prefilled.
+- **Rust unit (fixture):** `parse_popular` on a snippet with 2 anchor-wrapped
+  covers + 1 text nav link (no img) → returns the 2 with correct title/url/cover,
+  in order.
+- **Frontend (vitest):** `Browse` renders cards from a mocked `scrapePopular`
+  (one repack → its title appears).
+- **Manual:** open Browse → ~170 covers load lazily → click a card → Extract tab
+  opens with the URL prefilled → Fetch works.
 
 ## Non-Goals
-- No real "popularity" ranking (homepage order = recency); no search/filter.
-- No cover caching/CDN; no infinite scroll (explicit "Load more").
-- No favouriting/history.
+- No client search/filter, no favouriting/history, no cover caching.
+- No "Top 50 of the Month" sub-list (separate page) — the full popular grid suffices.
