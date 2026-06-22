@@ -31,6 +31,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             greet,
             commands::fetch_parts,
+            commands::scrape_popular,
             extractor::extract_links,
             extractor::cancel_extraction,
             downloader::start_downloads,
