@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { RepackCard } from "@/components/RepackCard";
+import { GameDetail } from "@/components/GameDetail";
 import { scrapePopular, type Repack } from "@/lib/showcase";
 import "./Browse.css";
 
@@ -8,6 +9,7 @@ export default function Browse() {
   const [repacks, setRepacks] = useState<Repack[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [selected, setSelected] = useState<string | null>(null);
 
   async function load() {
     setLoading(true);
@@ -26,6 +28,13 @@ export default function Browse() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const handleSelect = (repack: Repack) => setSelected(repack.pageUrl);
+  const handleBack = () => setSelected(null);
+
+  if (selected) {
+    return <GameDetail pageUrl={selected} onBack={handleBack} />;
+  }
+
   return (
     <div className="browse-page">
       <div className="browse-header">
@@ -42,7 +51,11 @@ export default function Browse() {
       )}
       <div className="repack-grid">
         {repacks.map((repack) => (
-          <RepackCard key={repack.pageUrl} repack={repack} />
+          <RepackCard
+            key={repack.pageUrl}
+            repack={repack}
+            onSelect={handleSelect}
+          />
         ))}
       </div>
     </div>

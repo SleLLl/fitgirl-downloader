@@ -1,0 +1,36 @@
+.detail-page {
+  @apply space-y-3;
+}
+.detail-bar {
+  @apply flex items-center gap-3;
+}
+.detail-link {
+  @apply text-sm text-muted-foreground underline;
+}
+.detail-error {
+  @apply text-sm text-red-400 flex items-center gap-2;
+}
+.detail-loading {
+  @apply text-sm text-muted-foreground;
+}
+.detail-title {
+  @apply text-lg font-semibold;
+}
+.detail-top {
+  @apply flex gap-4;
+}
+.detail-cover {
+  @apply w-40 rounded;
+}
+.detail-info {
+  @apply text-sm space-y-1;
+}
+.detail-info-label {
+  @apply text-muted-foreground;
+}
+.detail-shots {
+  @apply grid grid-cols-2 sm:grid-cols-3 gap-2;
+}
+.detail-shot {
+  @apply w-full rounded;
+}
