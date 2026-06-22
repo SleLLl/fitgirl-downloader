@@ -1,6 +1,9 @@
 .browse-page {
   @apply space-y-3;
 }
+.browse-search {
+  @apply w-full max-w-md;
+}
 .browse-header {
   @apply flex items-center gap-3;
 }

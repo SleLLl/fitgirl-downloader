@@ -11,12 +11,16 @@ export function RepackCard({
 
   return (
     <button className="repack-card" onClick={handlePick}>
-      <img
-        className="repack-cover"
-        src={repack.coverUrl}
-        alt={repack.title}
-        loading="lazy"
-      />
+      {repack.coverUrl ? (
+        <img
+          className="repack-cover"
+          src={repack.coverUrl}
+          alt={repack.title}
+          loading="lazy"
+        />
+      ) : (
+        <div className="repack-cover" />
+      )}
       <span className="repack-title">{repack.title}</span>
     </button>
   );

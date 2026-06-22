@@ -16,6 +16,10 @@ export function scrapePopular(): Promise<Repack[]> {
   return invoke<Repack[]>("scrape_popular");
 }
 
+export function searchRepacks(query: string): Promise<Repack[]> {
+  return invoke<Repack[]>("search_repacks", { query });
+}
+
 export function scrapeGame(url: string): Promise<GameDetails> {
   return invoke<GameDetails>("scrape_game", { url });
 }
