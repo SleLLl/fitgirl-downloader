@@ -1,12 +1,13 @@
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import Browse from "@/pages/Browse";
 import Game from "@/pages/Game";
 import Downloads from "@/pages/Downloads";
 import { useAppEvents } from "@/hooks/useAppEvents";
 import { useAppStore } from "@/store/useAppStore";
 
 function App() {
-  const [tab, setTab] = useState<"extract" | "downloads">("extract");
+  const tab = useAppStore((s) => s.tab);
+  const setTab = useAppStore((s) => s.setTab);
   useAppEvents();
   const active = useAppStore(
     (s) =>
@@ -17,6 +18,12 @@ function App() {
   return (
     <main className="dark min-h-screen bg-background text-foreground">
       <nav className="flex gap-2 p-3 border-b border-border">
+        <Button
+          variant={tab === "browse" ? "default" : "secondary"}
+          onClick={() => setTab("browse")}
+        >
+          Browse
+        </Button>
         <Button
           variant={tab === "extract" ? "default" : "secondary"}
           onClick={() => setTab("extract")}
@@ -31,6 +38,9 @@ function App() {
         </Button>
       </nav>
       <div className="p-4">
+        <div hidden={tab !== "browse"}>
+          <Browse />
+        </div>
         <div hidden={tab !== "extract"}>
           <Game />
         </div>

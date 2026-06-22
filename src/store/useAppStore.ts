@@ -4,6 +4,7 @@ import type { DownloadItem } from "@/lib/download";
 import type { Settings } from "@/lib/settings";
 
 export type Part = { url: string; checked: boolean };
+export type Tab = "browse" | "extract" | "downloads";
 
 type AppState = {
   url: string;
@@ -15,7 +16,9 @@ type AppState = {
   downloadDir: string | null;
   downloads: Record<string, DownloadItem>;
   settings: Settings | null;
+  tab: Tab;
 
+  setTab: (tab: Tab) => void;
   setUrl: (url: string) => void;
   setStatus: (status: string) => void;
   setBusy: (busy: boolean) => void;
@@ -40,7 +43,9 @@ export const useAppStore = create<AppState>((set) => ({
   downloadDir: null,
   downloads: {},
   settings: null,
+  tab: "browse",
 
+  setTab: (tab) => set({ tab }),
   setUrl: (url) => set({ url }),
   setStatus: (status) => set({ status }),
   setBusy: (busy) => set({ busy }),

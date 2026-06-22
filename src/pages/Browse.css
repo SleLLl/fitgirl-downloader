@@ -1,0 +1,27 @@
+.browse-page {
+  @apply space-y-3;
+}
+.browse-header {
+  @apply flex items-center gap-3;
+}
+.browse-title {
+  @apply text-lg font-semibold;
+}
+.browse-loading {
+  @apply text-sm text-muted-foreground;
+}
+.browse-error {
+  @apply text-sm text-red-400 flex items-center gap-2;
+}
+.repack-grid {
+  @apply grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3;
+}
+.repack-card {
+  @apply flex flex-col gap-1 text-left border border-border rounded-md p-2 hover:bg-muted;
+}
+.repack-cover {
+  @apply w-full aspect-[3/4] object-cover rounded bg-muted;
+}
+.repack-title {
+  @apply text-xs font-medium line-clamp-2;
+}
