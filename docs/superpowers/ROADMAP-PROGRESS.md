@@ -92,6 +92,14 @@ fresh morning one) can read this to know exactly where things stand and continue
   edge, unenforced input bounds) — deferred. **B2 MERGED to master (`d79c9a5`),
   branch deleted. DONE.** Needs user live-verify: kill app mid-download →
   relaunch → paused with partial sizes → Resume completes; folder remembered.
-- NEXT: C — Showcase (scrape `fitgirl-repacks.site` homepage → top-repacks grid
-  with covers; click loads the game URL into Extract). Then updater/distribution
-  = DESIGN DOC ONLY (do not implement autonomously).
+- C — Showcase: spec+plan revised to scrape `/popular-repacks/` (user pointed
+  there; ~170 popular games as anchor-wrapped cover imgs). Built INLINE:
+  parse_popular + fixture (`0b0b434`), scrape_popular command (`64c1737`),
+  showcase lib + store `tab` + 3-tab App + Browse grid (`26a6575`). Final review
+  (opus): ready to merge, no Critical/Important; applied 1 hardening (game-page
+  href filter, `219b8a0`). **C MERGED to master (`219b8a0`), branch deleted.
+  DONE.** Needs user live-verify: Browse loads covers, click → Extract prefilled.
+- ALL BUILD MILESTONES DONE: B1, B1.5, B2, C all merged to master.
+- FINAL: updater + distribution = DESIGN DOC ONLY (written, not implemented —
+  outward-facing signing/releases need the user). See
+  `docs/.../2026-06-22-updater-distribution-design.md`.
