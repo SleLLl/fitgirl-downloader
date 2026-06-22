@@ -74,3 +74,38 @@ auto-update to new versions.
 
 ## Non-Goals (for the first version)
 - Mac/Linux builds, delta updates, staged rollouts, telemetry.
+
+---
+
+## Implementation status (GitHub Releases chosen)
+
+**Wired in-repo (build stays green, app unaffected until configured):**
+- `tauri-plugin-updater` (Rust) registered in `lib.rs`; `@tauri-apps/plugin-updater` (JS).
+- `bundle.targets = ["nsis"]`, `bundle.createUpdaterArtifacts = true` in `tauri.conf.json`.
+- `updater:default` capability.
+- `src/lib/updater.ts` (`checkForUpdates`) + a "Check for updates" button in the
+  Settings panel (errors gracefully until the updater is configured).
+- `.github/workflows/release.yml` (tauri-action, builds NSIS + signs + publishes a
+  draft GitHub Release with `latest.json`).
+
+**Remaining user steps (outward-facing — not done autonomously):**
+1. Create the GitHub repo; replace `OWNER/REPO` placeholders (workflow + the
+   endpoint below). Add a remote and push.
+2. Generate the updater keypair: `npm run tauri signer generate -d`. Store the
+   **private** key + password as repo secrets `TAURI_SIGNING_PRIVATE_KEY` /
+   `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`. Keep the private key out of git.
+3. Add this block to `src-tauri/tauri.conf.json` with the **public** key + repo
+   (omitted from the repo because a placeholder pubkey fails `generate_context!`):
+   ```json
+   "plugins": {
+     "updater": {
+       "endpoints": [
+         "https://github.com/OWNER/REPO/releases/latest/download/latest.json"
+       ],
+       "pubkey": "<paste the generated public key>"
+     }
+   }
+   ```
+4. Tag `v0.1.0` and push → the workflow builds + drafts a Release; publish it.
+   "Check for updates" then works against that release.
+5. (Optional) Buy an OS Authenticode cert to avoid the SmartScreen warning.

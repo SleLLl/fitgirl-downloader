@@ -1,10 +1,28 @@
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
 import { useAppStore } from "@/store/useAppStore";
 import { setSetting } from "@/lib/settings";
+import { checkForUpdates } from "@/lib/updater";
 
 export function SettingsPanel() {
   const settings = useAppStore((s) => s.settings);
   const setSettings = useAppStore((s) => s.setSettings);
   const downloadDir = useAppStore((s) => s.downloadDir);
+  const [updateStatus, setUpdateStatus] = useState("");
+  const [checking, setChecking] = useState(false);
+
+  async function onCheckUpdates() {
+    setChecking(true);
+    setUpdateStatus("Checking…");
+    try {
+      setUpdateStatus(await checkForUpdates());
+    } catch (e) {
+      setUpdateStatus(`Update check failed: ${String(e)}`);
+    } finally {
+      setChecking(false);
+    }
+  }
+
   if (!settings) return null;
 
   function update(key: "file_concurrency" | "segments", value: number) {
@@ -45,6 +63,13 @@ export function SettingsPanel() {
           onChange={(e) => update("segments", Number(e.target.value))}
           className="settings-input"
         />
+      </div>
+      <div className="settings-row">
+        <span className="settings-label">Updates</span>
+        <Button variant="secondary" onClick={onCheckUpdates} disabled={checking}>
+          Check for updates
+        </Button>
+        {updateStatus && <span className="settings-note">{updateStatus}</span>}
       </div>
     </div>
   );

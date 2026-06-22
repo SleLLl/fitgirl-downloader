@@ -1,0 +1,45 @@
+# Release workflow — builds the Windows installer, signs it for the updater, and
+# publishes a GitHub Release with `latest.json` for auto-update.
+#
+# BEFORE THIS WORKS, the repo owner must (see
+# docs/superpowers/specs/2026-06-22-updater-distribution-design.md):
+#   1. Add the `plugins.updater` block to src-tauri/tauri.conf.json with the
+#      real `pubkey` and `endpoints` (this repo's release `latest.json`).
+#   2. Generate an updater keypair: `npm run tauri signer generate -d`.
+#   3. Add repo secrets: TAURI_SIGNING_PRIVATE_KEY,
+#      TAURI_SIGNING_PRIVATE_KEY_PASSWORD.
+#   4. Push a tag like `v0.1.0` to trigger this workflow.
+name: release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install frontend deps
+        run: npm ci
+      - name: Build + release
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: "FitGirl Downloader ${{ github.ref_name }}"
+          releaseDraft: true
+          prerelease: false
+          # tauri-action uploads the NSIS installer + its .sig and generates
+          # latest.json for the updater endpoint.
