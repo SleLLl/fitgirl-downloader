@@ -62,6 +62,43 @@ pub struct Repack {
     pub cover_url: String,
 }
 
+/// True for an https FitGirl URL that is a single-slug game page (not the
+/// homepage, a list/category/system page, or pagination).
+fn is_game_page(href: &str) -> bool {
+    let parsed = match Url::parse(href) {
+        Ok(u) => u,
+        Err(_) => return false,
+    };
+    if !matches!(
+        parsed.host_str(),
+        Some("fitgirl-repacks.site") | Some("www.fitgirl-repacks.site")
+    ) {
+        return false;
+    }
+    let segs: Vec<&str> = parsed
+        .path()
+        .split('/')
+        .filter(|s| !s.is_empty())
+        .collect();
+    if segs.len() != 1 {
+        return false;
+    }
+    const NON_GAME: &[&str] = &[
+        "popular-repacks",
+        "pop-repacks",
+        "category",
+        "tag",
+        "author",
+        "page",
+        "all-my-repacks-a-z",
+        "updates-list",
+        "faq",
+        "donations",
+        "games-with-my-personal-pink-paw-award",
+    ];
+    !NON_GAME.contains(&segs[0])
+}
+
 /// Parse FitGirl's popular-repacks page into cards: each is an anchor to a game
 /// page wrapping a cover `<img>` (alt = title, src = cover). Text nav links have
 /// no wrapped image and are skipped.
@@ -75,7 +112,7 @@ pub fn parse_popular(html: &str) -> Vec<Repack> {
             Some(h) => h.to_string(),
             None => continue,
         };
-        if !href.contains("fitgirl-repacks.site/") {
+        if !is_game_page(&href) {
             continue;
         }
         let image = match a.select(&img).next() {
