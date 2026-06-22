@@ -19,3 +19,12 @@ export function scrapePopular(): Promise<Repack[]> {
 export function scrapeGame(url: string): Promise<GameDetails> {
   return invoke<GameDetails>("scrape_game", { url });
 }
+
+/// `https://fitgirl-repacks.site/<slug>/` → `<slug>` and back.
+export function slugFromUrl(url: string): string {
+  return url.replace(/^https?:\/\/[^/]+\//, "").replace(/\/$/, "");
+}
+
+export function gameUrlFromSlug(slug: string): string {
+  return `https://fitgirl-repacks.site/${slug}/`;
+}

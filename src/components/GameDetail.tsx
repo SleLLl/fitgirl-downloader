@@ -1,40 +1,19 @@
-import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { scrapeGame, type GameDetails } from "@/lib/showcase";
-import { useAppStore } from "@/store/useAppStore";
+import { useGameDetails } from "@/hooks/useGameDetails";
 import "./GameDetail.css";
 
 export function GameDetail({
   pageUrl,
   onBack,
+  onExtract,
 }: {
   pageUrl: string;
   onBack: () => void;
+  onExtract: () => void;
 }) {
-  const setUrl = useAppStore((s) => s.setUrl);
-  const setTab = useAppStore((s) => s.setTab);
-  const [details, setDetails] = useState<GameDetails | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const { data: details, error, isLoading, refetch } = useGameDetails(pageUrl);
 
-  async function load() {
-    setError(null);
-    setDetails(null);
-    try {
-      setDetails(await scrapeGame(pageUrl));
-    } catch (caught) {
-      setError(String(caught));
-    }
-  }
-
-  useEffect(() => {
-    void load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pageUrl]);
-
-  const handleExtract = () => {
-    setUrl(pageUrl);
-    setTab("extract");
-  };
+  const handleRetry = () => refetch();
 
   return (
     <div className="detail-page">
@@ -42,7 +21,7 @@ export function GameDetail({
         <Button variant="secondary" onClick={onBack}>
           ← Back
         </Button>
-        <Button onClick={handleExtract}>Extract & download</Button>
+        <Button onClick={onExtract}>Extract & download</Button>
         <a
           className="detail-link"
           href={pageUrl}
@@ -54,13 +33,13 @@ export function GameDetail({
       </div>
       {error && (
         <p className="detail-error">
-          {error}{" "}
-          <Button variant="secondary" onClick={load}>
+          {String(error)}{" "}
+          <Button variant="secondary" onClick={handleRetry}>
             Retry
           </Button>
         </p>
       )}
-      {!details && !error && <p className="detail-loading">Loading…</p>}
+      {isLoading && <p className="detail-loading">Loading…</p>}
       {details && (
         <>
           <h2 className="detail-title">{details.title}</h2>

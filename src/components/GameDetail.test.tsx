@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { screen } from "@testing-library/react";
+import { renderWithQuery } from "@/test/providers";
 
 vi.mock("@/lib/showcase", () => ({
   scrapeGame: vi.fn(() =>
@@ -17,10 +18,11 @@ import { GameDetail } from "./GameDetail";
 
 describe("GameDetail", () => {
   it("renders title and info from scrapeGame", async () => {
-    render(
+    renderWithQuery(
       <GameDetail
         pageUrl="https://fitgirl-repacks.site/test-game/"
         onBack={vi.fn()}
+        onExtract={vi.fn()}
       />
     );
     expect(await screen.findByText("Test Game")).toBeInTheDocument();

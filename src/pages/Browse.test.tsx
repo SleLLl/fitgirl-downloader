@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { screen } from "@testing-library/react";
+import { renderWithQuery } from "@/test/providers";
 
 vi.mock("@/lib/showcase", () => ({
   scrapePopular: vi.fn(() =>
@@ -17,7 +18,7 @@ import Browse from "./Browse";
 
 describe("Browse page", () => {
   it("renders repack cards from the scraper", async () => {
-    render(<Browse />);
+    renderWithQuery(<Browse onSelect={vi.fn()} />);
     expect(await screen.findByText("Game One")).toBeInTheDocument();
   });
 });
