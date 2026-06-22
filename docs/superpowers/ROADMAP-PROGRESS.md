@@ -100,6 +100,13 @@ fresh morning one) can read this to know exactly where things stand and continue
   href filter, `219b8a0`). **C MERGED to master (`219b8a0`), branch deleted.
   DONE.** Needs user live-verify: Browse loads covers, click → Extract prefilled.
 - ALL BUILD MILESTONES DONE: B1, B1.5, B2, C all merged to master.
-- FINAL: updater + distribution = DESIGN DOC ONLY (written, not implemented —
-  outward-facing signing/releases need the user). See
-  `docs/.../2026-06-22-updater-distribution-design.md`.
+- FINAL: updater + distribution. User chose **GitHub Releases**. WIRED in-repo
+  (`236097c`, merged): tauri-plugin-updater + JS plugin, bundle nsis +
+  createUpdaterArtifacts, updater:default capability, src/lib/updater.ts +
+  Check-for-updates button, .github/workflows/release.yml (tauri-action). Build
+  green; app unaffected until configured. Remaining USER steps (outward-facing,
+  not done autonomously) in `docs/.../2026-06-22-updater-distribution-design.md`:
+  create GitHub repo + replace OWNER/REPO, generate updater keypair + set repo
+  secrets, add the `plugins.updater` block (pubkey+endpoint) to tauri.conf.json
+  (omitted because a placeholder pubkey breaks generate_context!), tag v0.1.0.
+- PROJECT COMPLETE: B1 + B1.5 + B2 + C + updater-wiring all on master.
