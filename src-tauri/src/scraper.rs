@@ -53,9 +53,71 @@ pub async fn fetch_html(client: &reqwest::Client, url: &str) -> Result<String, r
         .await
 }
 
+/// A popular repack card scraped from the popular-repacks page.
+#[derive(Debug, Clone, PartialEq, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Repack {
+    pub title: String,
+    pub page_url: String,
+    pub cover_url: String,
+}
+
+/// Parse FitGirl's popular-repacks page into cards: each is an anchor to a game
+/// page wrapping a cover `<img>` (alt = title, src = cover). Text nav links have
+/// no wrapped image and are skipped.
+pub fn parse_popular(html: &str) -> Vec<Repack> {
+    let doc = Html::parse_document(html);
+    let anchor = Selector::parse("a[href]").expect("valid selector");
+    let img = Selector::parse("img").expect("valid selector");
+    let mut out = Vec::new();
+    for a in doc.select(&anchor) {
+        let href = match a.value().attr("href") {
+            Some(h) => h.to_string(),
+            None => continue,
+        };
+        if !href.contains("fitgirl-repacks.site/") {
+            continue;
+        }
+        let image = match a.select(&img).next() {
+            Some(i) => i,
+            None => continue,
+        };
+        let title = image.value().attr("alt").unwrap_or("").trim().to_string();
+        let cover = image
+            .value()
+            .attr("data-src")
+            .or_else(|| image.value().attr("src"))
+            .unwrap_or("")
+            .to_string();
+        if title.is_empty() || cover.is_empty() {
+            continue;
+        }
+        out.push(Repack {
+            title,
+            page_url: href,
+            cover_url: cover,
+        });
+    }
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn parses_popular_covers_skipping_text_links() {
+        let html = include_str!("../tests/fixtures/popular.html");
+        let r = parse_popular(html);
+        assert_eq!(r.len(), 2);
+        assert_eq!(r[0].title, "Game One");
+        assert_eq!(r[0].page_url, "https://fitgirl-repacks.site/game-one/");
+        assert_eq!(
+            r[0].cover_url,
+            "https://i0.wp.com/img/one.jpg?resize=150%2C200&ssl=1"
+        );
+        assert_eq!(r[1].title, "Game Two");
+    }
 
     #[test]
     fn accepts_official_domain() {
