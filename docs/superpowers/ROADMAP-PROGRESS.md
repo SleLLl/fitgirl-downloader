@@ -109,4 +109,24 @@ fresh morning one) can read this to know exactly where things stand and continue
   create GitHub repo + replace OWNER/REPO, generate updater keypair + set repo
   secrets, add the `plugins.updater` block (pubkey+endpoint) to tauri.conf.json
   (omitted because a placeholder pubkey breaks generate_context!), tag v0.1.0.
-- PROJECT COMPLETE: B1 + B1.5 + B2 + C + updater-wiring all on master.
+- PROJECT COMPLETE (phase 1): B1 + B1.5 + B2 + C + updater-wiring all on master.
+
+## Phase 2 (post-launch polish + manager features)
+
+- Default branch renamed `master` → `main` (pushed to GitHub SleLLl/fitgirl-downloader).
+- Updater plugin registration was DISABLED (`3f40f36`) — it panics without a
+  `plugins.updater` config block; re-enable together with the user's pubkey.
+- UI polish merged to main: Settings moved to its own tab + Choose-folder button
+  (`5f10567`); download progress shows total during download (`89ba118`);
+  Gmail-style shift-click range select for parts (`e9d7c59`); JSX style refactor
+  (`e24b36e`); download UX polish — pausable queued + remove/clear-finished (`0c99363`).
+- USER ROADMAP (from references Fit-Launcher / Repacks-Manager / Easy-Downloader):
+  download polish ✅, then D (game details), E (catalog search), F (library),
+  quick wins.
+- **D — Game detail view DONE, merged to main (`77769b0`):** parse_game_details
+  + scrape_game; click a repack → GameDetail (cover/info/screenshots) →
+  Extract&download. Review passed (UTF-8 slicing confirmed safe). Needs user
+  live-verify.
+- NEXT: E — catalog search (FitGirl search → results grid in Browse). Then
+  F — library (group completed downloads by game, open folder, mark installed).
+  Then quick wins (open-folder button, per-part copy link). Updater: pending pubkey.
