@@ -132,6 +132,10 @@ fresh morning one) can read this to know exactly where things stand and continue
   Outlet, useAppEvents once); Query caches popular + game details (usePopular/
   useGameDetails, staleTime 5m); store.tab removed (state already in store).
   Review passed, no Critical/Important. Tests use src/test/providers.tsx.
-- NEXT: E — catalog search (FitGirl search → results grid; new /search route +
-  useQuery(['search', q])). Then F — library. Then quick wins (open-folder,
+- **E — Catalog search DONE, merged to main (`8eaf287`):** parse_search +
+  search_repacks (`?s=`, url-encoded); search box in Browse (debounced via
+  useDebounced, cached via useSearch ['search',q] enabled>=2); RepackCard cover
+  placeholder. Decided to keep search IN Browse (no /search route). Review passed.
+- NEXT: F — library (group completed downloads by game, open folder, mark
+  installed). Then quick wins (open-folder button via tauri-plugin-opener,
   per-part copy link). Updater: pending user pubkey.
