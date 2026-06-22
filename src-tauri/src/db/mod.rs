@@ -65,6 +65,15 @@ impl Db {
         Ok(())
     }
 
+    pub fn set_total(&self, id: &str, total_bytes: i64) -> rusqlite::Result<()> {
+        let c = self.conn.lock().unwrap();
+        c.execute(
+            "UPDATE downloads SET total_bytes=?2 WHERE id=?1",
+            rusqlite::params![id, total_bytes],
+        )?;
+        Ok(())
+    }
+
     pub fn load_unfinished(&self) -> rusqlite::Result<Vec<DownloadRow>> {
         let c = self.conn.lock().unwrap();
         let mut stmt = c.prepare(

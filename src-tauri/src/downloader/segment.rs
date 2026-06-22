@@ -143,9 +143,11 @@ pub async fn download_file(
     segments: u64,
     seg_concurrency: usize,
     on_bytes: Arc<dyn Fn(u64) + Send + Sync>,
+    on_total: Arc<dyn Fn(u64) + Send + Sync>,
     stop: Arc<AtomicBool>,
 ) -> Result<u64, String> {
     let (total, range_ok) = probe_total(client, url).await?;
+    on_total(total);
     let ranges = if range_ok && total > 0 {
         split_ranges(total, segments)
     } else {
@@ -299,9 +301,11 @@ mod tests {
         let client = reqwest::Client::new();
         let stop = Arc::new(AtomicBool::new(false));
         let on_bytes: Arc<dyn Fn(u64) + Send + Sync> = Arc::new(|_| {});
-        let written = download_file(&client, &url, &dest, 4, 4, on_bytes, stop)
-            .await
-            .unwrap();
+        let on_total: Arc<dyn Fn(u64) + Send + Sync> = Arc::new(|_| {});
+        let written =
+            download_file(&client, &url, &dest, 4, 4, on_bytes, on_total, stop)
+                .await
+                .unwrap();
         assert_eq!(written, 1000);
         assert_eq!(std::fs::read(&dest).unwrap(), blob);
         std::fs::remove_dir_all(&dir).ok();

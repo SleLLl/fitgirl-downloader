@@ -220,6 +220,18 @@ impl DownloadManager {
                 }
             });
 
+            // Report the total size as soon as it's known (after the probe), so
+            // the UI shows the denominator + percent during the download.
+            let s4 = shared.clone();
+            let app4 = app.clone();
+            let id4 = id.clone();
+            let db4 = db.clone();
+            let on_total: Arc<dyn Fn(u64) + Send + Sync> = Arc::new(move |total: u64| {
+                s4.total.store(total, Ordering::Relaxed);
+                let _ = db4.set_total(&id4, total as i64);
+                let _ = app4.emit("download-progress", s4.snapshot(&id4));
+            });
+
             let client = reqwest::Client::new();
             let res = download_file(
                 &client,
@@ -228,6 +240,7 @@ impl DownloadManager {
                 segments,
                 SEG_CONCURRENCY,
                 on_bytes,
+                on_total,
                 stop.clone(),
             )
             .await;
