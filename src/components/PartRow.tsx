@@ -13,7 +13,7 @@ function partStatusClass(status: string): string {
 
 export function PartRow({ part, index }: { part: Part; index: number }) {
   const result = useAppStore((s) => s.results[part.url]);
-  const togglePart = useAppStore((s) => s.togglePart);
+  const selectPart = useAppStore((s) => s.selectPart);
   const downloads = useAppStore((s) => s.downloads);
   const { onDownloadOne } = useDownloads();
 
@@ -28,16 +28,17 @@ export function PartRow({ part, index }: { part: Part; index: number }) {
   const canDownload =
     result?.status === "done" && !!result.directUrl && !download;
 
-  const handleToggle = () => togglePart(index);
+  const handleRowClick = (event: MouseEvent) => {
+    selectPart(index, event.shiftKey);
+  };
   const handleDownload = (event: MouseEvent) => {
-    event.preventDefault();
     event.stopPropagation();
     void onDownloadOne(part.url);
   };
 
   return (
-    <label className="part-row">
-      <Checkbox checked={part.checked} onCheckedChange={handleToggle} />
+    <div className="part-row" onClick={handleRowClick}>
+      <Checkbox checked={part.checked} className="pointer-events-none" />
       <span className="part-name">{filename}</span>
       {result && (
         <span className={partStatusClass(result.status)}>{result.status}</span>
@@ -52,6 +53,6 @@ export function PartRow({ part, index }: { part: Part; index: number }) {
           Download
         </Button>
       )}
-    </label>
+    </div>
   );
 }

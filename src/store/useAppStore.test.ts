@@ -49,6 +49,24 @@ describe("useAppStore", () => {
     expect(useAppStore.getState().parts).toEqual([]);
   });
 
+  it("selectPart shift-extends the range to the anchor's state", () => {
+    useAppStore.setState({
+      parts: ["a", "b", "c", "d", "e"].map((url) => ({ url, checked: false })),
+      selectionAnchor: null,
+    });
+    // plain click on index 1 → checks it + sets anchor
+    useAppStore.getState().selectPart(1, false);
+    // shift-click on index 3 → range [1..3] takes the anchor's state (checked)
+    useAppStore.getState().selectPart(3, true);
+    expect(useAppStore.getState().parts.map((p) => p.checked)).toEqual([
+      false,
+      true,
+      true,
+      true,
+      false,
+    ]);
+  });
+
   it("setSettings stores the settings object", () => {
     useAppStore.getState().setSettings({
       downloadDir: "/d",
