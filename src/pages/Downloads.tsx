@@ -1,10 +1,12 @@
 import { Button } from "@/components/ui/button";
+import { clearFinished } from "@/lib/download";
 import { resumeAll } from "@/lib/settings";
 import { DownloadRow } from "@/components/DownloadRow";
 import { useAppStore } from "@/store/useAppStore";
 import "./Downloads.css";
 
 const RESUMABLE_STATUSES = ["paused", "failed"];
+const FINISHED_STATUSES = ["done", "failed", "cancelled"];
 
 export default function Downloads() {
   const downloads = useAppStore((s) => s.downloads);
@@ -12,18 +14,34 @@ export default function Downloads() {
   const resumableCount = items.filter((item) =>
     RESUMABLE_STATUSES.includes(item.status)
   ).length;
+  const finishedCount = items.filter((item) =>
+    FINISHED_STATUSES.includes(item.status)
+  ).length;
+
+  const dropFinished = useAppStore((s) => s.dropFinished);
 
   const handleResumeAll = () => resumeAll();
+  const handleClearFinished = () => {
+    void clearFinished();
+    dropFinished();
+  };
 
   return (
     <div className="downloads-page">
       <div className="downloads-header">
         <h2 className="downloads-title">Downloads ({items.length})</h2>
-        {resumableCount > 0 && (
-          <Button variant="secondary" onClick={handleResumeAll}>
-            Resume all ({resumableCount})
-          </Button>
-        )}
+        <div className="downloads-actions">
+          {resumableCount > 0 && (
+            <Button variant="secondary" onClick={handleResumeAll}>
+              Resume all ({resumableCount})
+            </Button>
+          )}
+          {finishedCount > 0 && (
+            <Button variant="secondary" onClick={handleClearFinished}>
+              Clear finished ({finishedCount})
+            </Button>
+          )}
+        </div>
       </div>
       {items.length === 0 && (
         <p className="downloads-empty">No downloads yet.</p>

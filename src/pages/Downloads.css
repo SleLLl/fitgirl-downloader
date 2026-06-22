@@ -28,3 +28,6 @@
 .downloads-header {
   @apply flex items-center justify-between;
 }
+.downloads-actions {
+  @apply flex gap-2;
+}

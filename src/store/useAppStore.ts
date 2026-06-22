@@ -34,6 +34,8 @@ type AppState = {
   mergeResult: (p: ExtractProgress) => void;
   setDownloadDir: (dir: string | null) => void;
   mergeDownload: (item: DownloadItem) => void;
+  dropDownload: (id: string) => void;
+  dropFinished: () => void;
   seedDownloads: (items: DownloadItem[]) => void;
   setSettings: (settings: Settings) => void;
   resetExtraction: () => void;
@@ -89,6 +91,20 @@ export const useAppStore = create<AppState>((set) => ({
   setDownloadDir: (downloadDir) => set({ downloadDir }),
   mergeDownload: (item) =>
     set((s) => ({ downloads: { ...s.downloads, [item.id]: item } })),
+  dropDownload: (id) =>
+    set((s) => {
+      const downloads = { ...s.downloads };
+      delete downloads[id];
+      return { downloads };
+    }),
+  dropFinished: () =>
+    set((s) => ({
+      downloads: Object.fromEntries(
+        Object.entries(s.downloads).filter(
+          ([, item]) => !["done", "failed", "cancelled"].includes(item.status)
+        )
+      ),
+    })),
   // Merge, not replace: a live progress event that arrived before this seed
   // resolved must not be clobbered by the older snapshot.
   seedDownloads: (items) =>

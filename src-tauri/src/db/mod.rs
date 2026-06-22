@@ -74,6 +74,12 @@ impl Db {
         Ok(())
     }
 
+    pub fn delete_job(&self, id: &str) -> rusqlite::Result<()> {
+        let c = self.conn.lock().unwrap();
+        c.execute("DELETE FROM downloads WHERE id=?1", rusqlite::params![id])?;
+        Ok(())
+    }
+
     pub fn load_unfinished(&self) -> rusqlite::Result<Vec<DownloadRow>> {
         let c = self.conn.lock().unwrap();
         let mut stmt = c.prepare(

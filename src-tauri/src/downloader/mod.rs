@@ -199,6 +199,13 @@ impl DownloadManager {
                 Err(_) => return,
             };
             if stop.load(Ordering::Relaxed) {
+                // Paused/cancelled before this queued task got a permit — record
+                // the terminal state instead of silently leaving it "queued".
+                let was_cancelled = *shared.status.lock().unwrap() == "cancelled";
+                let final_status = if was_cancelled { "cancelled" } else { "paused" };
+                *shared.status.lock().unwrap() = final_status.to_string();
+                let _ = db.set_status(&id, final_status);
+                let _ = app.emit("download-progress", shared.snapshot(&id));
                 return;
             }
             *shared.status.lock().unwrap() = "downloading".to_string();
@@ -364,6 +371,49 @@ pub fn cancel_download(manager: State<'_, DownloadManager>, id: String) {
         for k in 0..(shared.segments as usize) {
             let _ = std::fs::remove_file(temp_path(&dest, k));
         }
+    }
+}
+
+/// Stop (if running), drop temp files, and forget a download — from the manager
+/// and the DB. The finished file (if any) is left on disk; only `.partN` temps
+/// are removed.
+fn forget(manager: &DownloadManager, id: &str) {
+    if let Some(shared) = manager.items.lock().unwrap().get(id).cloned() {
+        shared.stop.lock().unwrap().store(true, Ordering::Relaxed);
+        let dest = PathBuf::from(&shared.dir).join(&shared.filename);
+        for k in 0..(shared.segments as usize) {
+            let _ = std::fs::remove_file(temp_path(&dest, k));
+        }
+    }
+    manager.items.lock().unwrap().remove(id);
+    manager.order.lock().unwrap().retain(|x| x != id);
+    let _ = manager.db.delete_job(id);
+}
+
+/// Remove a single download from the list (and DB).
+#[tauri::command]
+pub fn remove_download(manager: State<'_, DownloadManager>, id: String) {
+    forget(&manager, &id);
+}
+
+/// Remove every finished/failed/cancelled download from the list (and DB).
+#[tauri::command]
+pub fn clear_finished(manager: State<'_, DownloadManager>) {
+    let terminal: Vec<String> = {
+        let items = manager.items.lock().unwrap();
+        items
+            .iter()
+            .filter(|(_, s)| {
+                matches!(
+                    s.status.lock().unwrap().as_str(),
+                    "done" | "failed" | "cancelled"
+                )
+            })
+            .map(|(id, _)| id.clone())
+            .collect()
+    };
+    for id in terminal {
+        forget(&manager, &id);
     }
 }
 

@@ -67,6 +67,32 @@ describe("useAppStore", () => {
     ]);
   });
 
+  it("dropFinished removes terminal downloads, keeps active ones", () => {
+    const make = (id: string, status: string) => ({
+      id,
+      url: "u",
+      filename: id,
+      dir: "/d",
+      totalBytes: 1,
+      downloadedBytes: 0,
+      status: status as never,
+      speedBps: 0,
+    });
+    useAppStore.setState({
+      downloads: {
+        a: make("a", "done"),
+        b: make("b", "downloading"),
+        c: make("c", "failed"),
+        d: make("d", "paused"),
+      },
+    });
+    useAppStore.getState().dropFinished();
+    expect(Object.keys(useAppStore.getState().downloads).sort()).toEqual([
+      "b",
+      "d",
+    ]);
+  });
+
   it("setSettings stores the settings object", () => {
     useAppStore.getState().setSettings({
       downloadDir: "/d",

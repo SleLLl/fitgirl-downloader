@@ -4,24 +4,35 @@ import {
   formatBytes,
   formatSpeed,
   pauseDownload,
+  removeDownload,
   resumeDownload,
   type DownloadItem,
 } from "@/lib/download";
+import { useAppStore } from "@/store/useAppStore";
 
-const CANCELABLE_STATUSES = ["downloading", "paused", "queued"];
+const PAUSABLE_STATUSES = ["downloading", "queued"];
+const RESUMABLE_STATUSES = ["paused", "failed"];
+const CANCELABLE_STATUSES = ["downloading", "queued", "paused"];
+const REMOVABLE_STATUSES = ["done", "failed", "cancelled"];
 
 export function DownloadRow({ item }: { item: DownloadItem }) {
+  const dropDownload = useAppStore((s) => s.dropDownload);
   const percent =
     item.totalBytes > 0
       ? Math.floor((item.downloadedBytes / item.totalBytes) * 100)
       : 0;
-  const isDownloading = item.status === "downloading";
-  const isPaused = item.status === "paused";
-  const isCancelable = CANCELABLE_STATUSES.includes(item.status);
+  const canPause = PAUSABLE_STATUSES.includes(item.status);
+  const canResume = RESUMABLE_STATUSES.includes(item.status);
+  const canCancel = CANCELABLE_STATUSES.includes(item.status);
+  const canRemove = REMOVABLE_STATUSES.includes(item.status);
 
   const handlePause = () => pauseDownload(item.id);
   const handleResume = () => resumeDownload(item.id);
   const handleCancel = () => cancelDownload(item.id);
+  const handleRemove = () => {
+    void removeDownload(item.id);
+    dropDownload(item.id);
+  };
 
   return (
     <div className="dl-row">
@@ -34,19 +45,24 @@ export function DownloadRow({ item }: { item: DownloadItem }) {
         {formatSpeed(item.speedBps)} · {item.status}
       </div>
       <div className="dl-actions">
-        {isDownloading && (
+        {canPause && (
           <Button variant="secondary" onClick={handlePause}>
             Pause
           </Button>
         )}
-        {isPaused && (
+        {canResume && (
           <Button variant="secondary" onClick={handleResume}>
             Resume
           </Button>
         )}
-        {isCancelable && (
+        {canCancel && (
           <Button variant="destructive" onClick={handleCancel}>
             Cancel
+          </Button>
+        )}
+        {canRemove && (
+          <Button variant="secondary" onClick={handleRemove}>
+            Remove
           </Button>
         )}
       </div>

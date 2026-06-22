@@ -43,6 +43,8 @@ pub fn run() {
             downloader::resume_download,
             downloader::resume_all,
             downloader::cancel_download,
+            downloader::remove_download,
+            downloader::clear_finished,
             downloader::list_downloads,
             downloader::get_settings,
             downloader::set_setting
