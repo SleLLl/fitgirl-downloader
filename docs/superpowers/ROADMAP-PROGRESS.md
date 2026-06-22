@@ -127,6 +127,11 @@ fresh morning one) can read this to know exactly where things stand and continue
   + scrape_game; click a repack → GameDetail (cover/info/screenshots) →
   Extract&download. Review passed (UTF-8 slicing confirmed safe). Needs user
   live-verify.
-- NEXT: E — catalog search (FitGirl search → results grid in Browse). Then
-  F — library (group completed downloads by game, open folder, mark installed).
-  Then quick wins (open-folder button, per-part copy link). Updater: pending pubkey.
+- **Plan R — TanStack Router + Query DONE, merged to main (`f63af5d`):** routes
+  /browse, /game/$slug, /extract, /downloads, /settings (memory history, Layout +
+  Outlet, useAppEvents once); Query caches popular + game details (usePopular/
+  useGameDetails, staleTime 5m); store.tab removed (state already in store).
+  Review passed, no Critical/Important. Tests use src/test/providers.tsx.
+- NEXT: E — catalog search (FitGirl search → results grid; new /search route +
+  useQuery(['search', q])). Then F — library. Then quick wins (open-folder,
+  per-part copy link). Updater: pending user pubkey.
