@@ -88,19 +88,21 @@ auto-update to new versions.
 - `.github/workflows/release.yml` (tauri-action, builds NSIS + signs + publishes a
   draft GitHub Release with `latest.json`).
 
+Repo: **`SleLLl/fitgirl-downloader`** (https://github.com/SleLLl/fitgirl-downloader).
+
 **Remaining user steps (outward-facing — not done autonomously):**
-1. Create the GitHub repo; replace `OWNER/REPO` placeholders (workflow + the
-   endpoint below). Add a remote and push.
+1. Push the code to the repo (remote `origin` is wired locally):
+   `git push -u origin master` (or rename to `main` if that's the default).
 2. Generate the updater keypair: `npm run tauri signer generate -d`. Store the
    **private** key + password as repo secrets `TAURI_SIGNING_PRIVATE_KEY` /
    `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`. Keep the private key out of git.
-3. Add this block to `src-tauri/tauri.conf.json` with the **public** key + repo
+3. Add this block to `src-tauri/tauri.conf.json` with the **public** key
    (omitted from the repo because a placeholder pubkey fails `generate_context!`):
    ```json
    "plugins": {
      "updater": {
        "endpoints": [
-         "https://github.com/OWNER/REPO/releases/latest/download/latest.json"
+         "https://github.com/SleLLl/fitgirl-downloader/releases/latest/download/latest.json"
        ],
        "pubkey": "<paste the generated public key>"
      }

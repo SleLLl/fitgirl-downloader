@@ -1,10 +1,12 @@
 # Release workflow — builds the Windows installer, signs it for the updater, and
 # publishes a GitHub Release with `latest.json` for auto-update.
 #
+# Repo: SleLLl/fitgirl-downloader
 # BEFORE THIS WORKS, the repo owner must (see
 # docs/superpowers/specs/2026-06-22-updater-distribution-design.md):
 #   1. Add the `plugins.updater` block to src-tauri/tauri.conf.json with the
-#      real `pubkey` and `endpoints` (this repo's release `latest.json`).
+#      real `pubkey` and the endpoint
+#      https://github.com/SleLLl/fitgirl-downloader/releases/latest/download/latest.json
 #   2. Generate an updater keypair: `npm run tauri signer generate -d`.
 #   3. Add repo secrets: TAURI_SIGNING_PRIVATE_KEY,
 #      TAURI_SIGNING_PRIVATE_KEY_PASSWORD.
