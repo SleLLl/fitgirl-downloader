@@ -14,7 +14,7 @@
   @apply mt-auto pt-2 border-t border-border;
 }
 .nav-item {
-  @apply flex items-center gap-2 px-2 py-2 rounded-md text-sm text-muted-foreground hover:bg-muted;
+  @apply flex w-full items-center gap-2 px-2 py-2 rounded-md text-sm text-left text-muted-foreground cursor-pointer hover:bg-muted;
 }
 .nav-item--active {
   @apply bg-muted text-foreground font-medium;
