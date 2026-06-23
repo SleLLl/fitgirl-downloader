@@ -158,5 +158,14 @@ fresh morning one) can read this to know exactly where things stand and continue
     + notification:default; useAppEvents fires on status→done transition.
   - Tag filters in Browse (`393e486`): parse_search reads tag-<slug> classes into
     Repack.tags; TagFilter chips, AND filtering, reset on query change.
-- NEXT: DESIGN PASS (user wants a cleaner/more compact UI) — restyle, not new
-  features. Updater: pending user pubkey.
+- **DESIGN PASS DONE (user chose: sidebar, fold Extract into game, all at once):**
+  - Sidebar nav (`87f47ee`): top tabs → left sidebar (lucide icons, downloads
+    badge); manual URL entry → secondary "Add by link" footer item.
+  - Extract folded into the game page: new DownloadPanel (reusable parts/extract/
+    links workspace), GameDetail embeds it + "Get download links" action (no tab
+    hop), resets the extraction context per game. /extract is now the "Add by
+    link" destination only.
+  - Visual polish (`f465964`): status pills on part rows + download rows.
+  - NEEDS USER LIVE-VERIFY: sidebar nav, game→download inline flow, Add-by-link,
+    status badges (GUI not run autonomously).
+- NEXT: open items — updater (pending user pubkey); optional sort in Browse.
