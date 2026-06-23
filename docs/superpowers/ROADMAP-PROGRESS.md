@@ -177,6 +177,20 @@ fresh morning one) can read this to know exactly where things stand and continue
     the game context, library::group prefers stored title + shows cover.
   - Theme toggle (`fa72018`): light/dark, persisted in localStorage, sidebar
     footer button.
-- NEXT / open items (need USER): activate updater (pubkey + plugins.updater
-  block + uncomment plugin); app icon/branding. Optional: Browse sort,
-  select-all/pause-all, search "load more", MD5 verify.
+- Icon + branding + README (`86eeeff`): custom app icon (indigo square +
+  download glyph) via `tauri icon` from src-tauri/app-icon.svg; index.html title
+  fixed; real README with legal disclaimer (unofficial, hosts no content, user
+  responsible, as-is). LICENSE is MIT.
+- System tray (`fb56e33`): tray-icon feature; Show/Quit menu, left-click
+  restores; window close hides to tray (Quit = real exit).
+- Cleanup (`23e9f30`): removed template `greet` command, set Cargo metadata.
+- STATUS: functionally v1-complete. App is solid; remaining work is release
+  plumbing only.
+- PUBLICATION CHECKLIST (mostly USER): (1) `npm run tauri signer generate -d`
+  for the updater keypair, (2) push to GitHub SleLLl/fitgirl-downloader, (3) repo
+  secrets TAURI_SIGNING_PRIVATE_KEY(+_PASSWORD), (4) tag `v0.1.0` to trigger
+  .github/workflows/release.yml. CODE-SIDE (me, once user provides pubkey): add
+  `plugins.updater` block to tauri.conf.json + uncomment the updater plugin in
+  lib.rs. Optional polish: close-to-tray toggle, Browse sort, search "load more",
+  MD5 verify, Authenticode signing.
+- User paused here ("пока хватит") to live-verify in the GUI.
