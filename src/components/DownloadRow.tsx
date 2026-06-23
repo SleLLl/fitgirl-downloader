@@ -6,6 +6,7 @@ import {
   pauseDownload,
   removeDownload,
   resumeDownload,
+  revealDownload,
   type DownloadItem,
 } from "@/lib/download";
 import { useAppStore } from "@/store/useAppStore";
@@ -25,10 +26,14 @@ export function DownloadRow({ item }: { item: DownloadItem }) {
   const canResume = RESUMABLE_STATUSES.includes(item.status);
   const canCancel = CANCELABLE_STATUSES.includes(item.status);
   const canRemove = REMOVABLE_STATUSES.includes(item.status);
+  const isDone = item.status === "done";
 
   const handlePause = () => pauseDownload(item.id);
   const handleResume = () => resumeDownload(item.id);
   const handleCancel = () => cancelDownload(item.id);
+  const handleOpen = () => {
+    void revealDownload(item);
+  };
   const handleRemove = () => {
     void removeDownload(item.id);
     dropDownload(item.id);
@@ -58,6 +63,11 @@ export function DownloadRow({ item }: { item: DownloadItem }) {
         {canCancel && (
           <Button variant="destructive" onClick={handleCancel}>
             Cancel
+          </Button>
+        )}
+        {isDone && (
+          <Button variant="secondary" onClick={handleOpen}>
+            Open folder
           </Button>
         )}
         {canRemove && (

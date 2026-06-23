@@ -25,8 +25,8 @@ export function PartRow({ part, index }: { part: Part; index: number }) {
     download && download.totalBytes > 0
       ? Math.floor((download.downloadedBytes / download.totalBytes) * 100)
       : 0;
-  const canDownload =
-    result?.status === "done" && !!result.directUrl && !download;
+  const directUrl = result?.directUrl;
+  const canDownload = result?.status === "done" && !!directUrl && !download;
 
   const handleRowClick = (event: MouseEvent) => {
     selectPart(index, event.shiftKey);
@@ -34,6 +34,10 @@ export function PartRow({ part, index }: { part: Part; index: number }) {
   const handleDownload = (event: MouseEvent) => {
     event.stopPropagation();
     void onDownloadOne(part.url);
+  };
+  const handleCopyLink = (event: MouseEvent) => {
+    event.stopPropagation();
+    if (directUrl) void navigator.clipboard.writeText(directUrl);
   };
 
   return (
@@ -47,6 +51,11 @@ export function PartRow({ part, index }: { part: Part; index: number }) {
         <span className="part-dl">
           {percent}% · {download.status}
         </span>
+      )}
+      {directUrl && (
+        <Button variant="secondary" onClick={handleCopyLink}>
+          Copy link
+        </Button>
       )}
       {canDownload && (
         <Button variant="secondary" onClick={handleDownload}>

@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { open } from "@tauri-apps/plugin-dialog";
+import { revealItemInDir } from "@tauri-apps/plugin-opener";
 import type { ExtractProgress } from "./api";
 import { filenameFromUrl } from "./format";
 
@@ -52,6 +53,19 @@ export function formatBytes(n: number): string {
 
 export function formatSpeed(bps: number): string {
   return `${formatBytes(bps)}/s`;
+}
+
+/// Join a directory and filename using the directory's own path separator
+/// (matches how the Rust side builds the on-disk path).
+function joinPath(dir: string, name: string): string {
+  const sep = dir.includes("\\") ? "\\" : "/";
+  const base = dir.endsWith(sep) ? dir.slice(0, -1) : dir;
+  return `${base}${sep}${name}`;
+}
+
+/// Reveal a completed download in the OS file manager (file selected).
+export function revealDownload(item: DownloadItem): Promise<void> {
+  return revealItemInDir(joinPath(item.dir, item.filename));
 }
 
 export function pickDownloadDir(): Promise<string | null> {
