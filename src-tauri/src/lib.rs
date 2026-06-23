@@ -5,12 +5,54 @@ mod extractor;
 mod library;
 mod scraper;
 
+use tauri::menu::{Menu, MenuItem};
+use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::Manager;
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 #[tauri::command]
 fn greet(name: &str) -> String {
     format!("Hello, {}! You've been greeted from Rust!", name)
+}
+
+/// Bring the main window back to the foreground.
+fn show_main(app: &tauri::AppHandle) {
+    if let Some(w) = app.get_webview_window("main") {
+        let _ = w.show();
+        let _ = w.unminimize();
+        let _ = w.set_focus();
+    }
+}
+
+/// Build the system-tray icon: left-click restores the window, the menu offers
+/// Show and Quit. Closing the window only hides it (see on_window_event), so the
+/// app keeps running in the tray until Quit.
+fn setup_tray(app: &tauri::AppHandle) -> tauri::Result<()> {
+    let show = MenuItem::with_id(app, "show", "Show", true, None::<&str>)?;
+    let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
+    let menu = Menu::with_items(app, &[&show, &quit])?;
+    TrayIconBuilder::with_id("main-tray")
+        .icon(app.default_window_icon().expect("bundled icon").clone())
+        .tooltip("FitGirl Downloader")
+        .menu(&menu)
+        .show_menu_on_left_click(false)
+        .on_menu_event(|app, event| match event.id.as_ref() {
+            "show" => show_main(app),
+            "quit" => app.exit(0),
+            _ => {}
+        })
+        .on_tray_icon_event(|tray, event| {
+            if let TrayIconEvent::Click {
+                button: MouseButton::Left,
+                button_state: MouseButtonState::Up,
+                ..
+            } = event
+            {
+                show_main(tray.app_handle());
+            }
+        })
+        .build(app)?;
+    Ok(())
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -32,7 +74,16 @@ pub fn run() {
             let manager = downloader::DownloadManager::new(app.handle().clone(), db);
             manager.restore_from_db();
             app.manage(manager);
+            setup_tray(app.handle())?;
             Ok(())
+        })
+        .on_window_event(|window, event| {
+            // Closing the window hides it to the tray instead of quitting; the
+            // tray's Quit (app.exit) is the real exit.
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                api.prevent_close();
+                let _ = window.hide();
+            }
         })
         .invoke_handler(tauri::generate_handler![
             greet,
