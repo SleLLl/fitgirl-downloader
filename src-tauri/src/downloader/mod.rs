@@ -191,6 +191,17 @@ impl DownloadManager {
         }
     }
 
+    /// Re-queue a paused/failed download: mark it `queued` (so the UI shows it is
+    /// waiting for a concurrency slot rather than still paused) and respawn it.
+    /// When `file_concurrency` is already saturated the task blocks on the
+    /// semaphore until a running download frees a slot.
+    fn requeue(&self, id: String, shared: Arc<Shared>) {
+        *shared.status.lock().unwrap() = "queued".to_string();
+        let _ = self.db.set_status(&id, "queued");
+        let _ = self.app.emit("download-progress", shared.snapshot(&id));
+        self.spawn_download(id, shared);
+    }
+
     fn spawn_download(&self, id: String, shared: Arc<Shared>) {
         let app = self.app.clone();
         let db = self.db.clone();
@@ -345,7 +356,7 @@ pub fn resume_download(manager: State<'_, DownloadManager>, id: String) {
     if let Some(shared) = shared {
         let status = shared.status.lock().unwrap().clone();
         if status == "paused" || status == "failed" {
-            manager.spawn_download(id, shared);
+            manager.requeue(id, shared);
         }
     }
 }
@@ -368,7 +379,7 @@ pub fn resume_all(manager: State<'_, DownloadManager>) {
             .collect()
     };
     for (id, shared) in pending {
-        manager.spawn_download(id, shared);
+        manager.requeue(id, shared);
     }
 }
 
