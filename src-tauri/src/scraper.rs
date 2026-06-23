@@ -283,6 +283,15 @@ pub fn parse_search(html: &str) -> Vec<Repack> {
     let mut out = Vec::new();
     let mut seen: std::collections::HashSet<String> = std::collections::HashSet::new();
     for art in doc.select(&article) {
+        // Keep only repack posts — search also returns blog posts (Updates
+        // Digest, RAR-splitting news), which sit in other WordPress categories.
+        let is_repack = art
+            .value()
+            .attr("class")
+            .is_some_and(|c| c.contains("category-lossless-repack"));
+        if !is_repack {
+            continue;
+        }
         let link = match art.select(&title_a).next() {
             Some(l) => l,
             None => continue,
@@ -338,7 +347,9 @@ mod tests {
     fn parses_search_results_with_optional_cover() {
         let html = include_str!("../tests/fixtures/search.html");
         let r = parse_search(html);
+        // The blog post (category-updates-digest) is filtered out.
         assert_eq!(r.len(), 2);
+        assert!(!r.iter().any(|x| x.title.contains("Updates Digest")));
         assert_eq!(r[0].title, "Cyberpunk 2077");
         assert_eq!(r[0].page_url, "https://fitgirl-repacks.site/cyberpunk-2077/");
         assert_eq!(r[0].cover_url, "https://i.imageban.ru/cp.jpg");
