@@ -168,4 +168,15 @@ fresh morning one) can read this to know exactly where things stand and continue
   - Visual polish (`f465964`): status pills on part rows + download rows.
   - NEEDS USER LIVE-VERIFY: sidebar nav, game→download inline flow, Add-by-link,
     status badges (GUI not run autonomously).
-- NEXT: open items — updater (pending user pubkey); optional sort in Browse.
+- **Reliability + Library + polish batch (user picked these), merged to main:**
+  - Auto-retry (`fcd9ce9`): download_segment + initial probe retry transient
+    failures up to 5× with exponential backoff (resumes from temp size); 30s
+    connect timeout; flaky-server test. 24→ Rust tests.
+  - Accurate Library (`fea0c00`): downloads table gains game_title/game_cover
+    (migrated), DownloadRequest carries them (camelCase serde), GameDetail sets
+    the game context, library::group prefers stored title + shows cover.
+  - Theme toggle (`fa72018`): light/dark, persisted in localStorage, sidebar
+    footer button.
+- NEXT / open items (need USER): activate updater (pubkey + plugins.updater
+  block + uncomment plugin); app icon/branding. Optional: Browse sort,
+  select-all/pause-all, search "load more", MD5 verify.
