@@ -9,12 +9,6 @@ use tauri::menu::{Menu, MenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::Manager;
 
-// Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-#[tauri::command]
-fn greet(name: &str) -> String {
-    format!("Hello, {}! You've been greeted from Rust!", name)
-}
-
 /// Bring the main window back to the foreground.
 fn show_main(app: &tauri::AppHandle) {
     if let Some(w) = app.get_webview_window("main") {
@@ -86,7 +80,6 @@ pub fn run() {
             }
         })
         .invoke_handler(tauri::generate_handler![
-            greet,
             commands::fetch_parts,
             commands::scrape_popular,
             commands::scrape_game,
