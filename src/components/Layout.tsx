@@ -1,5 +1,13 @@
 import { Link, Outlet, useRouterState } from "@tanstack/react-router";
-import { Download, Library, Link2, Search, Settings } from "lucide-react";
+import {
+  Download,
+  Library,
+  Link2,
+  Moon,
+  Search,
+  Settings,
+  Sun,
+} from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useAppEvents } from "@/hooks/useAppEvents";
 import { useAppStore } from "@/store/useAppStore";
@@ -41,9 +49,13 @@ export function Layout() {
         ACTIVE_STATUSES.includes(d.status)
       ).length
   );
+  const theme = useAppStore((s) => s.theme);
+  const setTheme = useAppStore((s) => s.setTheme);
+  const isDark = theme === "dark";
+  const toggleTheme = () => setTheme(isDark ? "light" : "dark");
 
   return (
-    <main className="app-shell dark">
+    <main className={isDark ? "app-shell dark" : "app-shell"}>
       <aside className="sidebar">
         <div className="sidebar-brand">FitGirl</div>
         <nav className="sidebar-nav">
@@ -59,6 +71,14 @@ export function Layout() {
         </nav>
         <div className="sidebar-footer">
           <NavItem to="/extract" icon={Link2} label="Add by link" />
+          <button
+            className="nav-item"
+            onClick={toggleTheme}
+            aria-label="Toggle theme"
+          >
+            {isDark ? <Sun size={18} aria-hidden /> : <Moon size={18} aria-hidden />}
+            <span className="nav-label">{isDark ? "Light" : "Dark"} mode</span>
+          </button>
         </div>
       </aside>
       <section className="app-content">

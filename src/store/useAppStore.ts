@@ -5,6 +5,16 @@ import type { Settings } from "@/lib/settings";
 
 export type Part = { url: string; checked: boolean };
 
+export type Theme = "dark" | "light";
+
+function initialTheme(): Theme {
+  try {
+    return localStorage.getItem("theme") === "light" ? "light" : "dark";
+  } catch {
+    return "dark";
+  }
+}
+
 type AppState = {
   url: string;
   /// Game context for the active extraction (empty on the manual "Add by link"
@@ -19,6 +29,7 @@ type AppState = {
   downloadDir: string | null;
   downloads: Record<string, DownloadItem>;
   settings: Settings | null;
+  theme: Theme;
   /// Index of the last part toggled without Shift — the range-select anchor.
   selectionAnchor: number | null;
 
@@ -40,6 +51,7 @@ type AppState = {
   dropFinished: () => void;
   seedDownloads: (items: DownloadItem[]) => void;
   setSettings: (settings: Settings) => void;
+  setTheme: (theme: Theme) => void;
   resetExtraction: () => void;
 };
 
@@ -55,6 +67,7 @@ export const useAppStore = create<AppState>((set) => ({
   downloadDir: null,
   downloads: {},
   settings: null,
+  theme: initialTheme(),
   selectionAnchor: null,
 
   setUrl: (url) => set({ url }),
@@ -118,5 +131,13 @@ export const useAppStore = create<AppState>((set) => ({
       },
     })),
   setSettings: (settings) => set({ settings }),
+  setTheme: (theme) => {
+    try {
+      localStorage.setItem("theme", theme);
+    } catch {
+      // ignore storage failures (private mode, etc.)
+    }
+    set({ theme });
+  },
   resetExtraction: () => set({ parts: [], results: {} }),
 }));
