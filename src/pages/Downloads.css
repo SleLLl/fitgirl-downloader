@@ -13,8 +13,29 @@
 .dl-row {
   @apply border border-border rounded-md p-3 space-y-2;
 }
+.dl-head {
+  @apply flex items-center justify-between gap-2;
+}
 .dl-name {
-  @apply text-sm font-mono;
+  @apply text-sm font-mono truncate;
+}
+.dl-status {
+  @apply text-xs px-2 py-0.5 rounded-full shrink-0 capitalize;
+}
+.dl-status--done {
+  @apply bg-green-500/15 text-green-400;
+}
+.dl-status--failed {
+  @apply bg-red-500/15 text-red-400;
+}
+.dl-status--active {
+  @apply bg-blue-500/15 text-blue-400;
+}
+.dl-status--paused {
+  @apply bg-yellow-500/15 text-yellow-400;
+}
+.dl-status--idle {
+  @apply bg-muted text-muted-foreground;
 }
 .dl-bar {
   @apply h-2 w-full bg-muted rounded;

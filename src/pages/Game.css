@@ -39,15 +39,15 @@
 }
 
 .part-status--done {
-  @apply text-green-400;
+  @apply text-xs px-2 py-0.5 rounded-full bg-green-500/15 text-green-400;
 }
 
 .part-status--failed {
-  @apply text-red-400;
+  @apply text-xs px-2 py-0.5 rounded-full bg-red-500/15 text-red-400;
 }
 
 .part-status--pending {
-  @apply text-yellow-400;
+  @apply text-xs px-2 py-0.5 rounded-full bg-yellow-500/15 text-yellow-400;
 }
 
 .links-section {
@@ -67,5 +67,5 @@
 }
 
 .part-dl {
-  @apply text-xs text-muted-foreground;
+  @apply text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground;
 }

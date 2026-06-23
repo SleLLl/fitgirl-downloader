@@ -16,6 +16,14 @@ const RESUMABLE_STATUSES = ["paused", "failed"];
 const CANCELABLE_STATUSES = ["downloading", "queued", "paused"];
 const REMOVABLE_STATUSES = ["done", "failed", "cancelled"];
 
+function statusClass(status: string): string {
+  if (status === "done") return "dl-status dl-status--done";
+  if (status === "failed") return "dl-status dl-status--failed";
+  if (status === "downloading") return "dl-status dl-status--active";
+  if (status === "paused") return "dl-status dl-status--paused";
+  return "dl-status dl-status--idle";
+}
+
 export function DownloadRow({ item }: { item: DownloadItem }) {
   const dropDownload = useAppStore((s) => s.dropDownload);
   const percent =
@@ -41,13 +49,16 @@ export function DownloadRow({ item }: { item: DownloadItem }) {
 
   return (
     <div className="dl-row">
-      <div className="dl-name">{item.filename}</div>
+      <div className="dl-head">
+        <div className="dl-name">{item.filename}</div>
+        <span className={statusClass(item.status)}>{item.status}</span>
+      </div>
       <div className="dl-bar">
         <div className="dl-bar-fill" style={{ width: `${percent}%` }} />
       </div>
       <div className="dl-meta">
         {formatBytes(item.downloadedBytes)} / {formatBytes(item.totalBytes)} ·{" "}
-        {formatSpeed(item.speedBps)} · {item.status}
+        {formatSpeed(item.speedBps)}
       </div>
       <div className="dl-actions">
         {canPause && (
