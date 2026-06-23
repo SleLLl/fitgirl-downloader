@@ -1,0 +1,9 @@
+.tag-filter {
+  @apply flex flex-wrap gap-1.5;
+}
+.tag-chip {
+  @apply text-xs px-2 py-0.5 rounded-full border border-border text-muted-foreground hover:bg-muted;
+}
+.tag-chip--active {
+  @apply bg-primary text-primary-foreground border-primary;
+}

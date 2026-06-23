@@ -148,4 +148,15 @@ fresh morning one) can read this to know exactly where things stand and continue
   23 Rust + 22 vitest green. Grouping is a filename-prefix heuristic (no game id
   stored at download time) — improve later by threading the game title into the
   job if needed.
-- NEXT: quick wins (per-part copy link). Updater: pending user pubkey.
+- Search hardening (`4b97fa1`): parse_search keeps only category-lossless-repack
+  articles (FitGirl search also returns blog posts — Updates Digest, RAR-splitting).
+- **Phase-2 feature batch (user: "все идеи топ"), all merged to main:**
+  - Quick wins (`d52787c`): Open folder on done downloads (revealItemInDir),
+    Copy link per part (navigator.clipboard).
+  - Aggregate progress/speed summary in Downloads header (`9fde7b1`).
+  - OS notification on download completion (`e3af26c`): tauri-plugin-notification
+    + notification:default; useAppEvents fires on status→done transition.
+  - Tag filters in Browse (`393e486`): parse_search reads tag-<slug> classes into
+    Repack.tags; TagFilter chips, AND filtering, reset on query change.
+- NEXT: DESIGN PASS (user wants a cleaner/more compact UI) — restyle, not new
+  features. Updater: pending user pubkey.

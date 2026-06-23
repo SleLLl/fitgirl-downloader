@@ -60,6 +60,8 @@ pub struct Repack {
     pub title: String,
     pub page_url: String,
     pub cover_url: String,
+    /// Genre/tag slugs (e.g. "strategy", "turn-based"); empty for popular cards.
+    pub tags: Vec<String>,
 }
 
 /// True for an https FitGirl URL that is a single-slug game page (not the
@@ -138,6 +140,7 @@ pub fn parse_popular(html: &str) -> Vec<Repack> {
             title,
             page_url: href,
             cover_url: cover,
+            tags: Vec::new(),
         });
     }
     out
@@ -285,13 +288,16 @@ pub fn parse_search(html: &str) -> Vec<Repack> {
     for art in doc.select(&article) {
         // Keep only repack posts — search also returns blog posts (Updates
         // Digest, RAR-splitting news), which sit in other WordPress categories.
-        let is_repack = art
-            .value()
-            .attr("class")
-            .is_some_and(|c| c.contains("category-lossless-repack"));
-        if !is_repack {
+        let class = art.value().attr("class").unwrap_or_default();
+        if !class.contains("category-lossless-repack") {
             continue;
         }
+        // WordPress tags the article with the game's genres as `tag-<slug>`.
+        let tags: Vec<String> = class
+            .split_whitespace()
+            .filter_map(|c| c.strip_prefix("tag-"))
+            .map(|s| s.to_string())
+            .collect();
         let link = match art.select(&title_a).next() {
             Some(l) => l,
             None => continue,
@@ -325,6 +331,7 @@ pub fn parse_search(html: &str) -> Vec<Repack> {
             title,
             page_url,
             cover_url,
+            tags,
         });
     }
     out
@@ -353,8 +360,10 @@ mod tests {
         assert_eq!(r[0].title, "Cyberpunk 2077");
         assert_eq!(r[0].page_url, "https://fitgirl-repacks.site/cyberpunk-2077/");
         assert_eq!(r[0].cover_url, "https://i.imageban.ru/cp.jpg");
+        assert_eq!(r[0].tags, vec!["3d"]);
         assert_eq!(r[1].title, "No Cover Game");
         assert_eq!(r[1].cover_url, "");
+        assert!(r[1].tags.is_empty());
     }
 
     #[test]

@@ -1,6 +1,11 @@
 import { invoke } from "@tauri-apps/api/core";
 
-export type Repack = { title: string; pageUrl: string; coverUrl: string };
+export type Repack = {
+  title: string;
+  pageUrl: string;
+  coverUrl: string;
+  tags: string[];
+};
 
 export type InfoField = { label: string; value: string };
 
