@@ -2,6 +2,7 @@ use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+use std::time::Duration;
 
 use futures_util::StreamExt;
 use tokio::io::AsyncWriteExt;
@@ -91,10 +92,45 @@ pub async fn probe_total(client: &reqwest::Client, url: &str) -> Result<(u64, bo
     Ok((len, false))
 }
 
-/// Download bytes `[start, end]` (resuming from the temp file's current size)
-/// into `temp` (append). Calls `on_bytes` with each chunk length. Returns early
-/// with Err("stopped") if `stop` is set.
+/// Max attempts per segment before giving up on a transient network failure.
+const MAX_ATTEMPTS: u32 = 5;
+
+/// Download bytes `[start, end]` into `temp`, retrying transient failures with
+/// exponential backoff. Each attempt resumes from the temp file's current size,
+/// so a mid-segment drop continues rather than restarts. Returns early with
+/// Err("stopped") if `stop` is set.
 pub async fn download_segment(
+    client: &reqwest::Client,
+    url: &str,
+    start: u64,
+    end: u64,
+    temp: &Path,
+    on_bytes: &(dyn Fn(u64) + Send + Sync),
+    stop: &AtomicBool,
+) -> Result<(), String> {
+    let mut attempt: u32 = 0;
+    loop {
+        if stop.load(Ordering::Relaxed) {
+            return Err("stopped".into());
+        }
+        match segment_attempt(client, url, start, end, temp, on_bytes, stop).await {
+            Ok(()) => return Ok(()),
+            Err(e) if e == "stopped" => return Err(e),
+            Err(e) => {
+                attempt += 1;
+                if attempt >= MAX_ATTEMPTS {
+                    return Err(e);
+                }
+                // 0.5s, 1s, 2s, 4s … capped at 8s.
+                let backoff = Duration::from_millis(500u64 << (attempt - 1));
+                tokio::time::sleep(backoff.min(Duration::from_secs(8))).await;
+            }
+        }
+    }
+}
+
+/// A single download attempt for `[start, end]`, appending to `temp`.
+async fn segment_attempt(
     client: &reqwest::Client,
     url: &str,
     start: u64,
@@ -146,7 +182,25 @@ pub async fn download_file(
     on_total: Arc<dyn Fn(u64) + Send + Sync>,
     stop: Arc<AtomicBool>,
 ) -> Result<u64, String> {
-    let (total, range_ok) = probe_total(client, url).await?;
+    let (total, range_ok) = {
+        let mut attempt: u32 = 0;
+        loop {
+            if stop.load(Ordering::Relaxed) {
+                return Err("stopped".into());
+            }
+            match probe_total(client, url).await {
+                Ok(v) => break v,
+                Err(e) => {
+                    attempt += 1;
+                    if attempt >= MAX_ATTEMPTS {
+                        return Err(e);
+                    }
+                    let backoff = Duration::from_millis(500u64 << (attempt - 1));
+                    tokio::time::sleep(backoff.min(Duration::from_secs(8))).await;
+                }
+            }
+        }
+    };
     on_total(total);
     let ranges = if range_ok && total > 0 {
         split_ranges(total, segments)
@@ -289,6 +343,78 @@ mod tests {
             }
         });
         format!("http://{}/file", addr)
+    }
+
+    use std::sync::atomic::AtomicU32;
+
+    /// Like `serve_blob` but drops the first `fail_first` connections (after
+    /// reading the request) to simulate transient network failures.
+    async fn serve_blob_flaky(blob: Vec<u8>, fail_first: u32) -> String {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        let fails = Arc::new(AtomicU32::new(fail_first));
+        tokio::spawn(async move {
+            loop {
+                let (mut sock, _) = match listener.accept().await {
+                    Ok(x) => x,
+                    Err(_) => break,
+                };
+                let blob = blob.clone();
+                let fails = fails.clone();
+                tokio::spawn(async move {
+                    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+                    let mut buf = vec![0u8; 8192];
+                    let n = sock.read(&mut buf).await.unwrap_or(0);
+                    if fails.load(Ordering::Relaxed) > 0 {
+                        fails.fetch_sub(1, Ordering::Relaxed);
+                        return; // close without responding
+                    }
+                    let req = String::from_utf8_lossy(&buf[..n]).to_string();
+                    let total = blob.len() as u64;
+                    let range = req
+                        .lines()
+                        .find(|l| l.to_ascii_lowercase().starts_with("range:"));
+                    if let Some(r) = range {
+                        let spec = r.split('=').nth(1).unwrap_or("").trim();
+                        let mut it = spec.split('-');
+                        let a: u64 = it.next().unwrap_or("0").trim().parse().unwrap_or(0);
+                        let b: u64 = it
+                            .next()
+                            .and_then(|s| s.trim().parse().ok())
+                            .unwrap_or(total - 1);
+                        let a = a.min(total - 1);
+                        let b = b.min(total - 1);
+                        let slice = &blob[a as usize..=b as usize];
+                        let header = format!(
+                            "HTTP/1.1 206 Partial Content\r\nContent-Range: bytes {}-{}/{}\r\nContent-Length: {}\r\nAccept-Ranges: bytes\r\nConnection: close\r\n\r\n",
+                            a, b, total, slice.len()
+                        );
+                        let _ = sock.write_all(header.as_bytes()).await;
+                        let _ = sock.write_all(slice).await;
+                    }
+                });
+            }
+        });
+        format!("http://{}/file", addr)
+    }
+
+    #[tokio::test]
+    async fn retries_transient_failures_and_completes() {
+        let blob: Vec<u8> = (0..1000u32).map(|i| (i % 256) as u8).collect();
+        let url = serve_blob_flaky(blob.clone(), 3).await;
+        let dir = std::env::temp_dir().join(format!("ffdl_retry_{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let dest = dir.join("blob.bin");
+        let client = reqwest::Client::new();
+        let stop = Arc::new(AtomicBool::new(false));
+        let on_bytes: Arc<dyn Fn(u64) + Send + Sync> = Arc::new(|_| {});
+        let on_total: Arc<dyn Fn(u64) + Send + Sync> = Arc::new(|_| {});
+        let written = download_file(&client, &url, &dest, 4, 4, on_bytes, on_total, stop)
+            .await
+            .unwrap();
+        assert_eq!(written, 1000);
+        assert_eq!(std::fs::read(&dest).unwrap(), blob);
+        std::fs::remove_dir_all(&dir).ok();
     }
 
     #[tokio::test]

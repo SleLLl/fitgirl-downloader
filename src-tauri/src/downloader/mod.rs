@@ -239,7 +239,10 @@ impl DownloadManager {
                 let _ = app4.emit("download-progress", s4.snapshot(&id4));
             });
 
-            let client = reqwest::Client::new();
+            let client = reqwest::Client::builder()
+                .connect_timeout(std::time::Duration::from_secs(30))
+                .build()
+                .unwrap_or_default();
             let res = download_file(
                 &client,
                 &shared.url,
