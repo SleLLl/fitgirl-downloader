@@ -24,7 +24,12 @@ export type DownloadItem = {
   speedBps: number;
 };
 
-export type DownloadRequest = { url: string; filename: string };
+export type DownloadRequest = {
+  url: string;
+  filename: string;
+  gameTitle?: string;
+  gameCover?: string;
+};
 
 /// Pair each resolved direct URL with its source filename (from the `#...`
 /// fragment of the original fuckingfast link).

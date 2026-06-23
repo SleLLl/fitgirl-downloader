@@ -13,11 +13,29 @@ pub struct DownloadRow {
     pub total_bytes: i64,
     pub status: String,
     pub created_at: i64,
+    /// Game this file belongs to (empty for manual "Add by link" downloads).
+    pub game_title: String,
+    pub game_cover: String,
 }
 
 /// Local SQLite store for download jobs and settings.
 pub struct Db {
     conn: Mutex<Connection>,
+}
+
+/// Map a `downloads` row (column order matches the SELECTs) to a `DownloadRow`.
+fn row_from(row: &rusqlite::Row) -> rusqlite::Result<DownloadRow> {
+    Ok(DownloadRow {
+        id: row.get(0)?,
+        url: row.get(1)?,
+        filename: row.get(2)?,
+        dir: row.get(3)?,
+        total_bytes: row.get(4)?,
+        status: row.get(5)?,
+        created_at: row.get(6)?,
+        game_title: row.get(7)?,
+        game_cover: row.get(8)?,
+    })
 }
 
 impl Db {
@@ -39,18 +57,31 @@ impl Db {
                id TEXT PRIMARY KEY, url TEXT, filename TEXT, dir TEXT,
                total_bytes INTEGER, status TEXT, created_at INTEGER);
              CREATE TABLE IF NOT EXISTS settings(key TEXT PRIMARY KEY, value TEXT);",
-        )
+        )?;
+        // Migrations: add game metadata columns to pre-existing DBs. The errors
+        // when the columns already exist are expected and ignored.
+        let _ = conn.execute(
+            "ALTER TABLE downloads ADD COLUMN game_title TEXT NOT NULL DEFAULT ''",
+            [],
+        );
+        let _ = conn.execute(
+            "ALTER TABLE downloads ADD COLUMN game_cover TEXT NOT NULL DEFAULT ''",
+            [],
+        );
+        Ok(())
     }
 
     pub fn upsert_job(&self, r: &DownloadRow) -> rusqlite::Result<()> {
         let c = self.conn.lock().unwrap();
         c.execute(
-            "INSERT INTO downloads(id,url,filename,dir,total_bytes,status,created_at)
-             VALUES(?1,?2,?3,?4,?5,?6,?7)
+            "INSERT INTO downloads(id,url,filename,dir,total_bytes,status,created_at,game_title,game_cover)
+             VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9)
              ON CONFLICT(id) DO UPDATE SET
-               url=?2,filename=?3,dir=?4,total_bytes=?5,status=?6,created_at=?7",
+               url=?2,filename=?3,dir=?4,total_bytes=?5,status=?6,created_at=?7,
+               game_title=?8,game_cover=?9",
             rusqlite::params![
-                r.id, r.url, r.filename, r.dir, r.total_bytes, r.status, r.created_at
+                r.id, r.url, r.filename, r.dir, r.total_bytes, r.status, r.created_at,
+                r.game_title, r.game_cover
             ],
         )?;
         Ok(())
@@ -83,21 +114,12 @@ impl Db {
     pub fn load_unfinished(&self) -> rusqlite::Result<Vec<DownloadRow>> {
         let c = self.conn.lock().unwrap();
         let mut stmt = c.prepare(
-            "SELECT id,url,filename,dir,total_bytes,status,created_at FROM downloads
+            "SELECT id,url,filename,dir,total_bytes,status,created_at,game_title,game_cover
+             FROM downloads
              WHERE status IN ('queued','downloading','paused') ORDER BY created_at",
         )?;
         let rows = stmt
-            .query_map([], |row| {
-                Ok(DownloadRow {
-                    id: row.get(0)?,
-                    url: row.get(1)?,
-                    filename: row.get(2)?,
-                    dir: row.get(3)?,
-                    total_bytes: row.get(4)?,
-                    status: row.get(5)?,
-                    created_at: row.get(6)?,
-                })
-            })?
+            .query_map([], row_from)?
             .collect::<rusqlite::Result<Vec<_>>>()?;
         Ok(rows)
     }
@@ -107,21 +129,12 @@ impl Db {
     pub fn load_finished(&self) -> rusqlite::Result<Vec<DownloadRow>> {
         let c = self.conn.lock().unwrap();
         let mut stmt = c.prepare(
-            "SELECT id,url,filename,dir,total_bytes,status,created_at FROM downloads
+            "SELECT id,url,filename,dir,total_bytes,status,created_at,game_title,game_cover
+             FROM downloads
              WHERE status='done' ORDER BY created_at DESC",
         )?;
         let rows = stmt
-            .query_map([], |row| {
-                Ok(DownloadRow {
-                    id: row.get(0)?,
-                    url: row.get(1)?,
-                    filename: row.get(2)?,
-                    dir: row.get(3)?,
-                    total_bytes: row.get(4)?,
-                    status: row.get(5)?,
-                    created_at: row.get(6)?,
-                })
-            })?
+            .query_map([], row_from)?
             .collect::<rusqlite::Result<Vec<_>>>()?;
         Ok(rows)
     }
@@ -160,6 +173,8 @@ mod tests {
             total_bytes: 10,
             status: status.into(),
             created_at: 1,
+            game_title: String::new(),
+            game_cover: String::new(),
         }
     }
 

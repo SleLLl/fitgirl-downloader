@@ -16,6 +16,8 @@ pub struct LibraryGame {
     pub dir: String,
     pub parts: u32,
     pub total_bytes: i64,
+    /// Cover URL when the download carried game metadata; empty otherwise.
+    pub cover_url: String,
     /// A concrete file to reveal in the file manager.
     pub sample_path: String,
 }
@@ -42,19 +44,23 @@ fn pretty(base: &str) -> String {
     s.split_whitespace().collect::<Vec<_>>().join(" ")
 }
 
-/// Group completed download rows into games by (dir, base name), preserving the
-/// input order (newest first) of each group's first-seen file.
+/// Group completed download rows into games, preserving input order (newest
+/// first). Uses the stored game title when present (downloads started from a
+/// game page), otherwise falls back to the filename base heuristic.
 pub fn group(rows: Vec<DownloadRow>) -> Vec<LibraryGame> {
     let mut out: Vec<LibraryGame> = Vec::new();
     for r in rows {
-        let base = base_name(&r.filename).to_string();
-        let key = (r.dir.clone(), base.clone());
-        if let Some(g) = out
-            .iter_mut()
-            .find(|g| g.dir == key.0 && g.name == pretty(&base))
-        {
+        let name = if r.game_title.is_empty() {
+            pretty(base_name(&r.filename))
+        } else {
+            r.game_title.clone()
+        };
+        if let Some(g) = out.iter_mut().find(|g| g.dir == r.dir && g.name == name) {
             g.parts += 1;
             g.total_bytes += r.total_bytes;
+            if g.cover_url.is_empty() {
+                g.cover_url = r.game_cover.clone();
+            }
             continue;
         }
         let sample = Path::new(&r.dir)
@@ -62,10 +68,11 @@ pub fn group(rows: Vec<DownloadRow>) -> Vec<LibraryGame> {
             .to_string_lossy()
             .to_string();
         out.push(LibraryGame {
-            name: pretty(&base),
+            name,
             dir: r.dir,
             parts: 1,
             total_bytes: r.total_bytes,
+            cover_url: r.game_cover,
             sample_path: sample,
         });
     }
@@ -91,6 +98,16 @@ mod tests {
             total_bytes: bytes,
             status: "done".into(),
             created_at: 0,
+            game_title: String::new(),
+            game_cover: String::new(),
+        }
+    }
+
+    fn titled(filename: &str, title: &str, cover: &str, bytes: i64) -> DownloadRow {
+        DownloadRow {
+            game_title: title.into(),
+            game_cover: cover.into(),
+            ..row(filename, "/dl", bytes)
         }
     }
 
@@ -118,6 +135,19 @@ mod tests {
         assert_eq!(games[0].total_bytes, 150);
         assert_eq!(games[1].name, "Doom");
         assert_eq!(games[1].parts, 1);
+    }
+
+    #[test]
+    fn groups_by_stored_title_with_cover() {
+        let rows = vec![
+            titled("a.part1.rar", "Cyberpunk 2077", "https://img/cp.jpg", 100),
+            titled("a.part2.rar", "Cyberpunk 2077", "https://img/cp.jpg", 50),
+        ];
+        let games = group(rows);
+        assert_eq!(games.len(), 1);
+        assert_eq!(games[0].name, "Cyberpunk 2077");
+        assert_eq!(games[0].parts, 2);
+        assert_eq!(games[0].cover_url, "https://img/cp.jpg");
     }
 
     #[test]

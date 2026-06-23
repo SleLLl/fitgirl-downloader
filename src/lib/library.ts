@@ -6,6 +6,7 @@ export type LibraryGame = {
   dir: string;
   parts: number;
   totalBytes: number;
+  coverUrl: string;
   samplePath: string;
 };
 

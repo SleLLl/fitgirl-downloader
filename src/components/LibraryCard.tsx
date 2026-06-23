@@ -11,6 +11,14 @@ export function LibraryCard({ game }: { game: LibraryGame }) {
 
   return (
     <div className="library-card">
+      {game.coverUrl && (
+        <img
+          className="library-cover"
+          src={game.coverUrl}
+          alt={game.name}
+          loading="lazy"
+        />
+      )}
       <div className="library-info">
         <span className="library-name">{game.name}</span>
         <span className="library-meta">

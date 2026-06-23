@@ -19,9 +19,15 @@ const DEFAULT_SEGMENTS: u64 = 4;
 const SEG_CONCURRENCY: usize = 4;
 
 #[derive(Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct DownloadRequest {
     pub url: String,
     pub filename: String,
+    /// Game metadata for the Library; empty for manual "Add by link" downloads.
+    #[serde(default)]
+    pub game_title: String,
+    #[serde(default)]
+    pub game_cover: String,
 }
 
 #[derive(Clone, Serialize)]
@@ -299,6 +305,8 @@ pub fn start_downloads(
             total_bytes: 0,
             status: "queued".to_string(),
             created_at,
+            game_title: req.game_title.clone(),
+            game_cover: req.game_cover.clone(),
         });
         let shared = Arc::new(Shared {
             url: req.url,

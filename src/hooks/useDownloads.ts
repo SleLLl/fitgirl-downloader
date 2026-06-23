@@ -19,8 +19,17 @@ export function useDownloads() {
     return picked;
   }
 
+  function gameMeta() {
+    const { gameTitle, gameCover } = s.getState();
+    return { gameTitle, gameCover };
+  }
+
   async function onDownloadAll() {
-    const reqs = buildRequests(s.getState().results);
+    const meta = gameMeta();
+    const reqs = buildRequests(s.getState().results).map((r) => ({
+      ...r,
+      ...meta,
+    }));
     if (reqs.length === 0) {
       s.getState().setStatus("No resolved links to download yet.");
       return;
@@ -37,7 +46,7 @@ export function useDownloads() {
     const dir = await ensureDir();
     if (!dir) return;
     const filename = filenameFromUrl(sourceUrl);
-    await startDownloads([{ url: direct, filename }], dir);
+    await startDownloads([{ url: direct, filename, ...gameMeta() }], dir);
     s.getState().setStatus(`Queued ${filename} into ${dir}.`);
   }
 

@@ -15,6 +15,7 @@ export function GameDetail({
 }) {
   const { data: details, error, isLoading, refetch } = useGameDetails(pageUrl);
   const setUrl = useAppStore((s) => s.setUrl);
+  const setGame = useAppStore((s) => s.setGame);
   const setStatus = useAppStore((s) => s.setStatus);
   const resetExtraction = useAppStore((s) => s.resetExtraction);
   const busy = useAppStore((s) => s.busy);
@@ -24,9 +25,15 @@ export function GameDetail({
   // Point the extraction context at this game and clear any prior game's parts.
   useEffect(() => {
     setUrl(pageUrl);
+    setGame("", "");
     resetExtraction();
     setStatus("");
-  }, [pageUrl, setUrl, resetExtraction, setStatus]);
+  }, [pageUrl, setUrl, setGame, resetExtraction, setStatus]);
+
+  // Carry the game's title + cover into the download jobs once known.
+  useEffect(() => {
+    if (details) setGame(details.title, details.coverUrl);
+  }, [details, setGame]);
 
   const handleRetry = () => refetch();
   const handleGetLinks = () => {

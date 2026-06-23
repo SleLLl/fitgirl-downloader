@@ -1,8 +1,18 @@
+import { useEffect } from "react";
 import { UrlBar } from "@/components/UrlBar";
 import { DownloadPanel } from "@/components/DownloadPanel";
+import { useAppStore } from "@/store/useAppStore";
 import "./Game.css";
 
 export default function Game() {
+  const setGame = useAppStore((s) => s.setGame);
+
+  // Manual downloads have no game context — clear it so the Library falls back
+  // to the filename heuristic instead of leaking a previously opened game.
+  useEffect(() => {
+    setGame("", "");
+  }, [setGame]);
+
   return (
     <main className="game-page">
       <h2 className="game-title">Add by link</h2>

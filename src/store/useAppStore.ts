@@ -7,6 +7,10 @@ export type Part = { url: string; checked: boolean };
 
 type AppState = {
   url: string;
+  /// Game context for the active extraction (empty on the manual "Add by link"
+  /// page); attached to download jobs so the Library can group by real game.
+  gameTitle: string;
+  gameCover: string;
   status: string;
   busy: boolean;
   cancelled: boolean;
@@ -19,6 +23,7 @@ type AppState = {
   selectionAnchor: number | null;
 
   setUrl: (url: string) => void;
+  setGame: (title: string, cover: string) => void;
   setStatus: (status: string) => void;
   setBusy: (busy: boolean) => void;
   setCancelled: (cancelled: boolean) => void;
@@ -40,6 +45,8 @@ type AppState = {
 
 export const useAppStore = create<AppState>((set) => ({
   url: "https://fitgirl-repacks.site/grand-theft-auto-v/",
+  gameTitle: "",
+  gameCover: "",
   status: "Waiting for input…",
   busy: false,
   cancelled: false,
@@ -51,6 +58,7 @@ export const useAppStore = create<AppState>((set) => ({
   selectionAnchor: null,
 
   setUrl: (url) => set({ url }),
+  setGame: (gameTitle, gameCover) => set({ gameTitle, gameCover }),
   setStatus: (status) => set({ status }),
   setBusy: (busy) => set({ busy }),
   setCancelled: (cancelled) => set({ cancelled }),
