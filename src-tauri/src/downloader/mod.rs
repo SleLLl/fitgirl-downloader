@@ -388,11 +388,15 @@ pub fn cancel_download(manager: State<'_, DownloadManager>, id: String) {
     if let Some(shared) = manager.items.lock().unwrap().get(&id).cloned() {
         *shared.status.lock().unwrap() = "cancelled".to_string();
         shared.stop.lock().unwrap().store(true, Ordering::Relaxed);
+        shared.speed.store(0, Ordering::Relaxed);
         let _ = manager.db.set_status(&id, "cancelled");
         let dest = PathBuf::from(&shared.dir).join(&shared.filename);
         for k in 0..(shared.segments as usize) {
             let _ = std::fs::remove_file(temp_path(&dest, k));
         }
+        // A running task emits its own terminal event, but a paused download has
+        // no task to do so — emit here so the UI always reflects the cancel.
+        let _ = manager.app.emit("download-progress", shared.snapshot(&id));
     }
 }
 
