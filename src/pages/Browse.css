@@ -25,6 +25,9 @@
 .repack-cover {
   @apply w-full aspect-[3/4] object-cover rounded bg-muted;
 }
+.repack-cover--pending {
+  @apply animate-pulse;
+}
 .repack-title {
   @apply text-xs font-medium line-clamp-2;
 }

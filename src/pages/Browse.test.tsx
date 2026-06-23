@@ -21,6 +21,16 @@ vi.mock("@/lib/showcase", () => ({
       },
     ])
   ),
+  // RepackCard lazily fetches covers for results that lack one.
+  scrapeGame: vi.fn(() =>
+    Promise.resolve({
+      title: "Search Hit",
+      pageUrl: "https://fitgirl-repacks.site/search-hit/",
+      coverUrl: "https://img/hit.jpg",
+      info: [],
+      screenshots: [],
+    })
+  ),
 }));
 
 import Browse from "./Browse";

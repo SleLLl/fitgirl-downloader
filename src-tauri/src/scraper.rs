@@ -106,7 +106,8 @@ pub fn parse_popular(html: &str) -> Vec<Repack> {
     let doc = Html::parse_document(html);
     let anchor = Selector::parse("a[href]").expect("valid selector");
     let img = Selector::parse("img").expect("valid selector");
-    let mut out = Vec::new();
+    let mut out: Vec<Repack> = Vec::new();
+    let mut seen: std::collections::HashSet<String> = std::collections::HashSet::new();
     for a in doc.select(&anchor) {
         let href = match a.value().attr("href") {
             Some(h) => h.to_string(),
@@ -127,6 +128,10 @@ pub fn parse_popular(html: &str) -> Vec<Repack> {
             .unwrap_or("")
             .to_string();
         if title.is_empty() || cover.is_empty() {
+            continue;
+        }
+        // The popular page lists some games in multiple sections — dedup by URL.
+        if !seen.insert(href.clone()) {
             continue;
         }
         out.push(Repack {
@@ -276,6 +281,7 @@ pub fn parse_search(html: &str) -> Vec<Repack> {
     let title_a = Selector::parse(".entry-title a[href]").expect("valid selector");
     let img = Selector::parse("img").expect("valid selector");
     let mut out = Vec::new();
+    let mut seen: std::collections::HashSet<String> = std::collections::HashSet::new();
     for art in doc.select(&article) {
         let link = match art.select(&title_a).next() {
             Some(l) => l,
@@ -287,6 +293,9 @@ pub fn parse_search(html: &str) -> Vec<Repack> {
         };
         let title = link.text().collect::<String>().trim().to_string();
         if title.is_empty() {
+            continue;
+        }
+        if !seen.insert(page_url.clone()) {
             continue;
         }
         let cover_url = art
@@ -315,6 +324,15 @@ pub fn parse_search(html: &str) -> Vec<Repack> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn dedups_popular_by_url() {
+        let html = r#"
+            <a href="https://fitgirl-repacks.site/g/" data-bump-view="tp"><img src="https://i.imageban.ru/a.jpg" alt="G"></a>
+            <a href="https://fitgirl-repacks.site/g/" data-bump-view="tp"><img src="https://i.imageban.ru/a.jpg" alt="G"></a>
+        "#;
+        assert_eq!(parse_popular(html).len(), 1);
+    }
 
     #[test]
     fn parses_search_results_with_optional_cover() {
