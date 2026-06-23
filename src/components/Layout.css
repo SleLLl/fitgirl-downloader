@@ -1,5 +1,5 @@
 .app-shell {
-  @apply min-h-screen flex bg-background text-foreground;
+  @apply h-screen overflow-hidden flex bg-background text-foreground;
 }
 .sidebar {
   @apply w-48 flex-none flex flex-col gap-1 p-2 border-r border-border;
@@ -26,5 +26,5 @@
   @apply text-xs rounded-full bg-primary text-primary-foreground px-1.5 py-0.5 leading-none;
 }
 .app-content {
-  @apply flex-1 min-w-0 p-4;
+  @apply flex-1 min-w-0 p-4 overflow-y-auto;
 }
