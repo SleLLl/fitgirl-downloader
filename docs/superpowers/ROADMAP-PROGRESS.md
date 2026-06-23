@@ -136,6 +136,16 @@ fresh morning one) can read this to know exactly where things stand and continue
   search_repacks (`?s=`, url-encoded); search box in Browse (debounced via
   useDebounced, cached via useSearch ['search',q] enabled>=2); RepackCard cover
   placeholder. Decided to keep search IN Browse (no /search route). Review passed.
-- NEXT: F — library (group completed downloads by game, open folder, mark
-  installed). Then quick wins (open-folder button via tauri-plugin-opener,
-  per-part copy link). Updater: pending user pubkey.
+- Bugfixes merged to main (`a8ca414`): parse_popular/parse_search dedup by URL
+  (popular page repeated games across sections — 90 cards / 53 unique); search
+  results have no thumbnails, so RepackCard now lazy-loads the cover from the
+  game page via useGameDetails (non-blocking, warms the detail-page cache).
+- **F — Library DONE, merged to main (`17a9cac`):** db.load_finished() (done
+  jobs survive restart), library::group() folds completed parts into games by
+  (dir, base name) stripping .partNN/ext, library_games command; /library route +
+  nav, useLibrary, LibraryCard with Open folder (revealItemInDir). Scope per user:
+  group done downloads by game + Open folder only (no mark-installed/remove).
+  23 Rust + 22 vitest green. Grouping is a filename-prefix heuristic (no game id
+  stored at download time) — improve later by threading the game title into the
+  job if needed.
+- NEXT: quick wins (per-part copy link). Updater: pending user pubkey.
