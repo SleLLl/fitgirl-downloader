@@ -1,0 +1,30 @@
+.app-shell {
+  @apply min-h-screen flex bg-background text-foreground;
+}
+.sidebar {
+  @apply w-48 flex-none flex flex-col gap-1 p-2 border-r border-border;
+}
+.sidebar-brand {
+  @apply text-sm font-semibold px-2 py-2;
+}
+.sidebar-nav {
+  @apply flex flex-col gap-1;
+}
+.sidebar-footer {
+  @apply mt-auto pt-2 border-t border-border;
+}
+.nav-item {
+  @apply flex items-center gap-2 px-2 py-2 rounded-md text-sm text-muted-foreground hover:bg-muted;
+}
+.nav-item--active {
+  @apply bg-muted text-foreground font-medium;
+}
+.nav-label {
+  @apply flex-1;
+}
+.nav-badge {
+  @apply text-xs rounded-full bg-primary text-primary-foreground px-1.5 py-0.5 leading-none;
+}
+.app-content {
+  @apply flex-1 min-w-0 p-4;
+}

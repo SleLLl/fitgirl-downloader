@@ -18,7 +18,6 @@ import {
   slugFromUrl,
   type Repack,
 } from "@/lib/showcase";
-import { useAppStore } from "@/store/useAppStore";
 
 const rootRoute = createRootRoute({ component: Layout });
 
@@ -40,14 +39,9 @@ function BrowseRoute() {
 function GameRoute() {
   const { slug } = gameRoute.useParams();
   const navigate = useNavigate();
-  const setUrl = useAppStore((s) => s.setUrl);
   const url = gameUrlFromSlug(slug);
-  const onExtract = () => {
-    setUrl(url);
-    navigate({ to: "/extract" });
-  };
   const onBack = () => navigate({ to: "/browse" });
-  return <GameDetail pageUrl={url} onBack={onBack} onExtract={onExtract} />;
+  return <GameDetail pageUrl={url} onBack={onBack} />;
 }
 
 const browseRoute = createRoute({

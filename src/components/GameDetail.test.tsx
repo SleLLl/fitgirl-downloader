@@ -22,7 +22,6 @@ describe("GameDetail", () => {
       <GameDetail
         pageUrl="https://fitgirl-repacks.site/test-game/"
         onBack={vi.fn()}
-        onExtract={vi.fn()}
       />
     );
     expect(await screen.findByText("Test Game")).toBeInTheDocument();

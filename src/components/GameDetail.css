@@ -28,6 +28,9 @@
 .detail-info-label {
   @apply text-muted-foreground;
 }
+.detail-download {
+  @apply space-y-3 border border-border rounded-md p-3;
+}
 .detail-shots {
   @apply grid grid-cols-2 sm:grid-cols-3 gap-2;
 }

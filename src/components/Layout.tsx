@@ -1,21 +1,34 @@
 import { Link, Outlet, useRouterState } from "@tanstack/react-router";
-import { buttonVariants } from "@/components/ui/button";
+import { Download, Library, Link2, Search, Settings } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { useAppEvents } from "@/hooks/useAppEvents";
 import { useAppStore } from "@/store/useAppStore";
+import "./Layout.css";
 
 const ACTIVE_STATUSES = ["downloading", "queued", "paused"];
 
-type NavTo = "/browse" | "/extract" | "/downloads" | "/library" | "/settings";
+type NavTo = "/browse" | "/downloads" | "/library" | "/settings" | "/extract";
 
-function NavLink({ to, label }: { to: NavTo; label: string }) {
+function NavItem({
+  to,
+  icon: Icon,
+  label,
+  badge,
+}: {
+  to: NavTo;
+  icon: LucideIcon;
+  label: string;
+  badge?: number;
+}) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const active = pathname === to || (to === "/browse" && pathname.startsWith("/game"));
+  const active =
+    pathname === to || (to === "/browse" && pathname.startsWith("/game"));
+  const className = active ? "nav-item nav-item--active" : "nav-item";
   return (
-    <Link
-      to={to}
-      className={buttonVariants({ variant: active ? "default" : "secondary" })}
-    >
-      {label}
+    <Link to={to} className={className}>
+      <Icon size={18} aria-hidden />
+      <span className="nav-label">{label}</span>
+      {badge ? <span className="nav-badge">{badge}</span> : null}
     </Link>
   );
 }
@@ -28,21 +41,29 @@ export function Layout() {
         ACTIVE_STATUSES.includes(d.status)
       ).length
   );
-  const downloadsLabel =
-    activeCount > 0 ? `Downloads (${activeCount})` : "Downloads";
 
   return (
-    <main className="dark min-h-screen bg-background text-foreground">
-      <nav className="flex gap-2 p-3 border-b border-border">
-        <NavLink to="/browse" label="Browse" />
-        <NavLink to="/extract" label="Extract" />
-        <NavLink to="/downloads" label={downloadsLabel} />
-        <NavLink to="/library" label="Library" />
-        <NavLink to="/settings" label="Settings" />
-      </nav>
-      <div className="p-4">
+    <main className="app-shell dark">
+      <aside className="sidebar">
+        <div className="sidebar-brand">FitGirl</div>
+        <nav className="sidebar-nav">
+          <NavItem to="/browse" icon={Search} label="Browse" />
+          <NavItem
+            to="/downloads"
+            icon={Download}
+            label="Downloads"
+            badge={activeCount}
+          />
+          <NavItem to="/library" icon={Library} label="Library" />
+          <NavItem to="/settings" icon={Settings} label="Settings" />
+        </nav>
+        <div className="sidebar-footer">
+          <NavItem to="/extract" icon={Link2} label="Add by link" />
+        </div>
+      </aside>
+      <section className="app-content">
         <Outlet />
-      </div>
+      </section>
     </main>
   );
 }

@@ -1,19 +1,37 @@
+import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { DownloadPanel } from "@/components/DownloadPanel";
 import { useGameDetails } from "@/hooks/useGameDetails";
+import { useExtraction } from "@/hooks/useExtraction";
+import { useAppStore } from "@/store/useAppStore";
 import "./GameDetail.css";
 
 export function GameDetail({
   pageUrl,
   onBack,
-  onExtract,
 }: {
   pageUrl: string;
   onBack: () => void;
-  onExtract: () => void;
 }) {
   const { data: details, error, isLoading, refetch } = useGameDetails(pageUrl);
+  const setUrl = useAppStore((s) => s.setUrl);
+  const setStatus = useAppStore((s) => s.setStatus);
+  const resetExtraction = useAppStore((s) => s.resetExtraction);
+  const busy = useAppStore((s) => s.busy);
+  const hasParts = useAppStore((s) => s.parts.length > 0);
+  const { onFetch } = useExtraction();
+
+  // Point the extraction context at this game and clear any prior game's parts.
+  useEffect(() => {
+    setUrl(pageUrl);
+    resetExtraction();
+    setStatus("");
+  }, [pageUrl, setUrl, resetExtraction, setStatus]);
 
   const handleRetry = () => refetch();
+  const handleGetLinks = () => {
+    void onFetch();
+  };
 
   return (
     <div className="detail-page">
@@ -21,7 +39,6 @@ export function GameDetail({
         <Button variant="secondary" onClick={onBack}>
           ← Back
         </Button>
-        <Button onClick={onExtract}>Extract & download</Button>
         <a
           className="detail-link"
           href={pageUrl}
@@ -59,6 +76,14 @@ export function GameDetail({
                 </li>
               ))}
             </ul>
+          </div>
+          <div className="detail-download">
+            {!hasParts && (
+              <Button onClick={handleGetLinks} disabled={busy}>
+                Get download links
+              </Button>
+            )}
+            <DownloadPanel />
           </div>
           <div className="detail-shots">
             {details.screenshots.map((shot) => (

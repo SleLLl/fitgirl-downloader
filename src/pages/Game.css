@@ -1,9 +1,17 @@
 .game-page {
-  @apply min-h-screen bg-background text-foreground p-6 space-y-4;
+  @apply space-y-4 max-w-2xl;
 }
 
 .game-title {
-  @apply text-xl font-semibold;
+  @apply text-lg font-semibold;
+}
+
+.game-hint {
+  @apply text-sm text-muted-foreground;
+}
+
+.download-panel {
+  @apply space-y-3;
 }
 
 .url-row {
