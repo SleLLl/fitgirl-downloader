@@ -2,6 +2,7 @@ mod commands;
 mod db;
 mod downloader;
 mod extractor;
+mod library;
 mod scraper;
 
 use tauri::Manager;
@@ -49,7 +50,8 @@ pub fn run() {
             downloader::clear_finished,
             downloader::list_downloads,
             downloader::get_settings,
-            downloader::set_setting
+            downloader::set_setting,
+            library::library_games
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

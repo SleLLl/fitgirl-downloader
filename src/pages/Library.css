@@ -1,0 +1,36 @@
+.library-page {
+  @apply space-y-3;
+}
+.library-header {
+  @apply flex items-center gap-3;
+}
+.library-title {
+  @apply text-lg font-semibold;
+}
+.library-loading {
+  @apply text-sm text-muted-foreground;
+}
+.library-error {
+  @apply text-sm text-red-400;
+}
+.library-empty {
+  @apply text-sm text-muted-foreground;
+}
+.library-list {
+  @apply space-y-2;
+}
+.library-card {
+  @apply flex items-center justify-between gap-3 border border-border rounded-md p-3;
+}
+.library-info {
+  @apply flex flex-col gap-0.5 min-w-0;
+}
+.library-name {
+  @apply text-sm font-medium truncate;
+}
+.library-meta {
+  @apply text-xs text-muted-foreground;
+}
+.library-dir {
+  @apply text-xs text-muted-foreground truncate;
+}

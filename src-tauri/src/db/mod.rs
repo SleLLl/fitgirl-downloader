@@ -102,6 +102,30 @@ impl Db {
         Ok(rows)
     }
 
+    /// All completed jobs, newest first — the Library reads from here so it
+    /// survives restarts (the in-memory manager only restores unfinished jobs).
+    pub fn load_finished(&self) -> rusqlite::Result<Vec<DownloadRow>> {
+        let c = self.conn.lock().unwrap();
+        let mut stmt = c.prepare(
+            "SELECT id,url,filename,dir,total_bytes,status,created_at FROM downloads
+             WHERE status='done' ORDER BY created_at DESC",
+        )?;
+        let rows = stmt
+            .query_map([], |row| {
+                Ok(DownloadRow {
+                    id: row.get(0)?,
+                    url: row.get(1)?,
+                    filename: row.get(2)?,
+                    dir: row.get(3)?,
+                    total_bytes: row.get(4)?,
+                    status: row.get(5)?,
+                    created_at: row.get(6)?,
+                })
+            })?
+            .collect::<rusqlite::Result<Vec<_>>>()?;
+        Ok(rows)
+    }
+
     pub fn get_setting(&self, key: &str) -> rusqlite::Result<Option<String>> {
         let c = self.conn.lock().unwrap();
         c.query_row("SELECT value FROM settings WHERE key=?1", [key], |r| r.get(0))
@@ -149,6 +173,18 @@ mod tests {
         assert_eq!(un.len(), 1);
         assert_eq!(un[0].id, "a");
         assert_eq!(un[0].status, "paused");
+    }
+
+    #[test]
+    fn load_finished_returns_done_newest_first() {
+        let db = Db::open_in_memory().unwrap();
+        for (id, st, t) in [("a", "done", 1), ("b", "paused", 2), ("c", "done", 3)] {
+            let mut r = row(id, st);
+            r.created_at = t;
+            db.upsert_job(&r).unwrap();
+        }
+        let done = db.load_finished().unwrap();
+        assert_eq!(done.iter().map(|r| r.id.as_str()).collect::<Vec<_>>(), ["c", "a"]);
     }
 
     #[test]

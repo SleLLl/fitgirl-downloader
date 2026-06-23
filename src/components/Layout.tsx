@@ -5,7 +5,7 @@ import { useAppStore } from "@/store/useAppStore";
 
 const ACTIVE_STATUSES = ["downloading", "queued", "paused"];
 
-type NavTo = "/browse" | "/extract" | "/downloads" | "/settings";
+type NavTo = "/browse" | "/extract" | "/downloads" | "/library" | "/settings";
 
 function NavLink({ to, label }: { to: NavTo; label: string }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
@@ -37,6 +37,7 @@ export function Layout() {
         <NavLink to="/browse" label="Browse" />
         <NavLink to="/extract" label="Extract" />
         <NavLink to="/downloads" label={downloadsLabel} />
+        <NavLink to="/library" label="Library" />
         <NavLink to="/settings" label="Settings" />
       </nav>
       <div className="p-4">

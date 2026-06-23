@@ -11,6 +11,7 @@ import { GameDetail } from "@/components/GameDetail";
 import Browse from "@/pages/Browse";
 import Game from "@/pages/Game";
 import Downloads from "@/pages/Downloads";
+import Library from "@/pages/Library";
 import Settings from "@/pages/Settings";
 import {
   gameUrlFromSlug,
@@ -69,6 +70,11 @@ const downloadsRoute = createRoute({
   path: "/downloads",
   component: Downloads,
 });
+const libraryRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/library",
+  component: Library,
+});
 const settingsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/settings",
@@ -81,6 +87,7 @@ const routeTree = rootRoute.addChildren([
   gameRoute,
   extractRoute,
   downloadsRoute,
+  libraryRoute,
   settingsRoute,
 ]);
 
