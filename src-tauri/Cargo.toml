@@ -30,4 +30,5 @@ tokio = { version = "1", features = ["full"] }
 url = "2"
 rusqlite = { version = "0.32", features = ["bundled"] }
 tauri-plugin-updater = "2"
+tauri-plugin-notification = "2.3.3"
 

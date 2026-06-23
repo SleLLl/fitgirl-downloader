@@ -3,6 +3,7 @@ import { onExtractProgress } from "@/lib/api";
 import { listDownloads, onDownloadProgress } from "@/lib/download";
 import { getSettings } from "@/lib/settings";
 import { statusText } from "@/lib/format";
+import { notifyDownloadDone } from "@/lib/notify";
 import { useAppStore } from "@/store/useAppStore";
 
 /// Registers the app's Tauri event subscriptions exactly once (mounted in the
@@ -29,7 +30,13 @@ export function useAppEvents() {
       if (useAppStore.getState().cancelled) return;
       setStatus(`Part ${p.index + 1}/${p.total}: ${statusText(p.status)}`);
     });
-    const unDownload = onDownloadProgress((item) => mergeDownload(item));
+    const unDownload = onDownloadProgress((item) => {
+      const prev = useAppStore.getState().downloads[item.id]?.status;
+      mergeDownload(item);
+      if (item.status === "done" && prev !== "done") {
+        void notifyDownloadDone(item.filename);
+      }
+    });
     return () => {
       unExtract.then((f) => f());
       unDownload.then((f) => f());

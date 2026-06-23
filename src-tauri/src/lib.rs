@@ -18,6 +18,7 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_notification::init())
         // NOTE: the updater plugin panics at startup unless `plugins.updater`
         // (endpoints + pubkey) exists in tauri.conf.json. Re-enable this line
         // TOGETHER with adding that config block (needs the real pubkey):
