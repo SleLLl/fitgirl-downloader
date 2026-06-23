@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { clearFinished } from "@/lib/download";
+import { clearFinished, formatBytes, formatSpeed } from "@/lib/download";
 import { resumeAll } from "@/lib/settings";
 import { DownloadRow } from "@/components/DownloadRow";
 import { useAppStore } from "@/store/useAppStore";
@@ -7,6 +7,7 @@ import "./Downloads.css";
 
 const RESUMABLE_STATUSES = ["paused", "failed"];
 const FINISHED_STATUSES = ["done", "failed", "cancelled"];
+const ACTIVE_STATUSES = ["downloading", "queued", "paused"];
 
 export default function Downloads() {
   const downloads = useAppStore((s) => s.downloads);
@@ -17,6 +18,18 @@ export default function Downloads() {
   const finishedCount = items.filter((item) =>
     FINISHED_STATUSES.includes(item.status)
   ).length;
+
+  const activeItems = items.filter((item) =>
+    ACTIVE_STATUSES.includes(item.status)
+  );
+  const totalSpeed = activeItems.reduce((sum, item) => sum + item.speedBps, 0);
+  const totalBytes = activeItems.reduce((sum, item) => sum + item.totalBytes, 0);
+  const downloadedBytes = activeItems.reduce(
+    (sum, item) => sum + item.downloadedBytes,
+    0
+  );
+  const overallPercent =
+    totalBytes > 0 ? Math.floor((downloadedBytes / totalBytes) * 100) : 0;
 
   const dropFinished = useAppStore((s) => s.dropFinished);
 
@@ -43,6 +56,13 @@ export default function Downloads() {
           )}
         </div>
       </div>
+      {activeItems.length > 0 && (
+        <div className="downloads-summary">
+          ↓ {formatSpeed(totalSpeed)} · {formatBytes(downloadedBytes)} /{" "}
+          {formatBytes(totalBytes)} ({overallPercent}%) · {activeItems.length}{" "}
+          active
+        </div>
+      )}
       {items.length === 0 && (
         <p className="downloads-empty">No downloads yet.</p>
       )}

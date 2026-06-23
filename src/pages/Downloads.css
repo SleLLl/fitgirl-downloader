@@ -7,6 +7,9 @@
 .downloads-empty {
   @apply text-sm text-muted-foreground;
 }
+.downloads-summary {
+  @apply text-sm text-muted-foreground tabular-nums;
+}
 .dl-row {
   @apply border border-border rounded-md p-3 space-y-2;
 }
