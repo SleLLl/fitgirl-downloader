@@ -10,6 +10,27 @@
 .downloads-summary {
   @apply text-sm text-muted-foreground tabular-nums;
 }
+.game-group {
+  @apply border border-border rounded-md p-3 space-y-2;
+}
+.game-group-head {
+  @apply flex items-center gap-3;
+}
+.game-group-cover {
+  @apply w-10 h-14 object-cover rounded shrink-0;
+}
+.game-group-info {
+  @apply flex flex-col gap-0.5 min-w-0;
+}
+.game-group-title {
+  @apply text-sm font-medium truncate;
+}
+.game-group-meta {
+  @apply text-xs text-muted-foreground tabular-nums;
+}
+.game-group-rows {
+  @apply space-y-2 pl-2 border-l border-border;
+}
 .dl-row {
   @apply border border-border rounded-md p-3 space-y-2;
 }

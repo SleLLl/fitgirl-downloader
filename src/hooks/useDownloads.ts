@@ -1,4 +1,5 @@
 import { useAppStore } from "@/store/useAppStore";
+import type { ExtractProgress } from "@/lib/api";
 import { buildRequests, pickDownloadDir, startDownloads } from "@/lib/download";
 import { setSetting } from "@/lib/settings";
 import { filenameFromUrl } from "@/lib/format";
@@ -22,6 +23,23 @@ export function useDownloads() {
   function gameMeta() {
     const { gameTitle, gameCover } = s.getState();
     return { gameTitle, gameCover };
+  }
+
+  /// Queue a single resolved part into `dir` with the given game metadata,
+  /// skipping it if a download with the same filename already exists (so cached
+  /// links + live events can't double up).
+  function queuePart(
+    p: ExtractProgress,
+    dir: string,
+    meta: { gameTitle: string; gameCover: string }
+  ) {
+    if (!p.directUrl) return;
+    const filename = filenameFromUrl(p.sourceUrl);
+    const exists = Object.values(s.getState().downloads).some(
+      (d) => d.filename === filename
+    );
+    if (exists) return;
+    void startDownloads([{ url: p.directUrl, filename, ...meta }], dir);
   }
 
   async function onDownloadAll() {
@@ -50,5 +68,5 @@ export function useDownloads() {
     s.getState().setStatus(`Queued ${filename} into ${dir}.`);
   }
 
-  return { onDownloadAll, onDownloadOne };
+  return { onDownloadAll, onDownloadOne, ensureDir, queuePart };
 }

@@ -1,3 +1,4 @@
+import { useNavigate } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { useAppStore } from "@/store/useAppStore";
 import { useDownloads } from "@/hooks/useDownloads";
@@ -8,6 +9,7 @@ export function LinksPanel() {
   const results = useAppStore((s) => s.results);
   const busy = useAppStore((s) => s.busy);
   const { onDownloadAll } = useDownloads();
+  const navigate = useNavigate();
 
   const directLinks = parts
     .map((part) => results[part.url]?.directUrl)
@@ -17,6 +19,10 @@ export function LinksPanel() {
 
   const handleCopy = () =>
     navigator.clipboard.writeText(directLinks.join("\n"));
+  const handleDownloadAll = async () => {
+    await onDownloadAll();
+    navigate({ to: "/downloads" });
+  };
 
   if (directLinks.length === 0) return null;
 
@@ -27,7 +33,7 @@ export function LinksPanel() {
       <Button onClick={handleCopy}>Copy all</Button>
       <Button
         variant="secondary"
-        onClick={onDownloadAll}
+        onClick={handleDownloadAll}
         disabled={!canDownloadAll}
       >
         Download all ({downloadable.length})

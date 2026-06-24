@@ -18,6 +18,8 @@ export type DownloadItem = {
   url: string;
   filename: string;
   dir: string;
+  gameTitle: string;
+  gameCover: string;
   totalBytes: number;
   downloadedBytes: number;
   status: DownloadStatus;

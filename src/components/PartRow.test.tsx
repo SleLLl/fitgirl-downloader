@@ -16,6 +16,8 @@ describe("PartRow", () => {
           url: "u",
           filename: "abc",
           dir: "/d",
+          gameTitle: "",
+          gameCover: "",
           totalBytes: 100,
           downloadedBytes: 50,
           status: "downloading",

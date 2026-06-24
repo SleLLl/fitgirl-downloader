@@ -6,12 +6,15 @@ import "./Game.css";
 
 export default function Game() {
   const setGame = useAppStore((s) => s.setGame);
+  const setAutoDownload = useAppStore((s) => s.setAutoDownload);
 
   // Manual downloads have no game context — clear it so the Library falls back
-  // to the filename heuristic instead of leaking a previously opened game.
+  // to the filename heuristic, and disarm auto-download so manual extraction
+  // does not queue links on its own.
   useEffect(() => {
     setGame("", "");
-  }, [setGame]);
+    setAutoDownload(null);
+  }, [setGame, setAutoDownload]);
 
   return (
     <main className="game-page">

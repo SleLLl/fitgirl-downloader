@@ -4,6 +4,7 @@ import { listDownloads, onDownloadProgress } from "@/lib/download";
 import { getSettings } from "@/lib/settings";
 import { statusText } from "@/lib/format";
 import { notifyDownloadDone } from "@/lib/notify";
+import { useDownloads } from "@/hooks/useDownloads";
 import { useAppStore } from "@/store/useAppStore";
 
 /// Registers the app's Tauri event subscriptions exactly once (mounted in the
@@ -11,6 +12,7 @@ import { useAppStore } from "@/store/useAppStore";
 /// funnelling extraction + download progress into the store. Seeds the current
 /// download list on mount.
 export function useAppEvents() {
+  const { queuePart } = useDownloads();
   useEffect(() => {
     const {
       mergeResult,
@@ -27,7 +29,17 @@ export function useAppEvents() {
     });
     const unExtract = onExtractProgress((p) => {
       mergeResult(p);
-      if (useAppStore.getState().cancelled) return;
+      // Auto-queue each link as it resolves, when the "Get links & download"
+      // flow armed a game and a folder is set. Only one extraction runs at a
+      // time, so a resolved link belongs to the armed game.
+      const st = useAppStore.getState();
+      if (st.autoDownload && st.downloadDir && p.status === "done" && p.directUrl) {
+        queuePart(p, st.downloadDir, {
+          gameTitle: st.autoDownload.gameTitle,
+          gameCover: st.autoDownload.gameCover,
+        });
+      }
+      if (st.cancelled) return;
       setStatus(`Part ${p.index + 1}/${p.total}: ${statusText(p.status)}`);
     });
     const unDownload = onDownloadProgress((item) => {

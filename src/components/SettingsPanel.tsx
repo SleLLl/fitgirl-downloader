@@ -10,6 +10,9 @@ export function SettingsPanel() {
   const setSettings = useAppStore((s) => s.setSettings);
   const downloadDir = useAppStore((s) => s.downloadDir);
   const setDownloadDir = useAppStore((s) => s.setDownloadDir);
+  const clearExtractionCache = useAppStore((s) => s.clearExtractionCache);
+
+  const handleClearCache = () => clearExtractionCache();
 
   async function chooseFolder() {
     const picked = await pickDownloadDir();
@@ -70,6 +73,15 @@ export function SettingsPanel() {
           </div>
         </>
       )}
+      <div className="settings-row">
+        <span className="settings-label">Link cache</span>
+        <span className="settings-note">
+          Resolved links are kept in memory until you restart the app.
+        </span>
+        <Button variant="secondary" onClick={handleClearCache}>
+          Clear
+        </Button>
+      </div>
     </div>
   );
 }
