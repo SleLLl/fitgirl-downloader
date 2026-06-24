@@ -5,24 +5,28 @@ import { useAppStore, type GameJob } from "@/store/useAppStore";
 // at a time. Module-level so concurrent enqueue calls share the same loop.
 let running = false;
 
-/// Enqueue a game for "extract links + download" and drain the queue one game at
-/// a time. Each job extracts its selected parts; resolved links auto-queue as
-/// downloads via the global progress listener (which reads `activeJob`).
-export async function enqueueGame(job: GameJob): Promise<void> {
-  useAppStore.getState().enqueueJob(job);
+/// Submit a game for "extract links + download" and drain the queue one game at
+/// a time. The job persists (status queued → extracting → done) so its card and
+/// file list stay on the Downloads page; resolved links auto-queue as downloads
+/// via the global progress listener (which reads the extracting job).
+export async function enqueueGame(job: Omit<GameJob, "status">): Promise<void> {
+  useAppStore.getState().enqueueJob({ ...job, status: "queued" });
   if (running) return;
   running = true;
   try {
     while (true) {
-      const current = useAppStore.getState().startNextJob();
-      if (!current) break;
+      const next = useAppStore
+        .getState()
+        .gameJobs.find((j) => j.status === "queued");
+      if (!next) break;
+      useAppStore.getState().setJobStatus(next.url, "extracting");
       try {
-        await extractLinks(current.partUrls);
+        await extractLinks(next.partUrls);
       } catch {
         // Extraction failed/cancelled — any links already resolved stay queued;
-        // move on to the next game rather than blocking the queue.
+        // move on rather than blocking the queue.
       }
-      useAppStore.getState().finishActiveJob();
+      useAppStore.getState().setJobStatus(next.url, "done");
     }
   } finally {
     running = false;

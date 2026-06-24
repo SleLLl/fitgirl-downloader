@@ -11,6 +11,7 @@ import "./Downloads.css";
 const RESUMABLE_STATUSES = ["paused", "failed"];
 const FINISHED_STATUSES = ["done", "failed", "cancelled"];
 const ACTIVE_STATUSES = ["downloading", "queued", "paused"];
+const JOB_ORDER: Record<string, number> = { extracting: 0, queued: 1, done: 2 };
 
 type RenderGroup = {
   key: string;
@@ -22,8 +23,7 @@ type RenderGroup = {
 
 export default function Downloads() {
   const downloads = useAppStore((s) => s.downloads);
-  const activeJob = useAppStore((s) => s.activeJob);
-  const queue = useAppStore((s) => s.extractionQueue);
+  const gameJobs = useAppStore((s) => s.gameJobs);
   const dropFinished = useAppStore((s) => s.dropFinished);
 
   const items = Object.values(downloads);
@@ -41,8 +41,8 @@ export default function Downloads() {
   const sumDone = activeItems.reduce((s, i) => s + i.downloadedBytes, 0);
   const overallPercent = sumTotal > 0 ? Math.floor((sumDone / sumTotal) * 100) : 0;
 
-  // Build the rows for a job from its selected parts, matching each to a live
-  // download by filename (placeholder until its link resolves).
+  // Each game job renders its full selected-file list (placeholder until a link
+  // resolves into a real download), so rows never disappear mid-flight.
   const claimed = new Set<string>();
   const jobRows = (job: GameJob): GameRow[] =>
     job.partUrls.map((u) => {
@@ -52,30 +52,30 @@ export default function Downloads() {
       return { filename, item };
     });
 
-  const groups: RenderGroup[] = [];
-  if (activeJob) {
-    const rows = jobRows(activeJob);
-    const resolved = rows.filter((r) => r.item).length;
-    groups.push({
-      key: activeJob.url,
-      title: activeJob.gameTitle,
-      cover: activeJob.gameCover,
-      phase: resolved < rows.length ? `Getting links ${resolved}/${rows.length}` : "",
-      rows,
-    });
-  }
-  for (const job of queue) {
-    groups.push({
-      key: job.url,
-      title: job.gameTitle,
-      cover: job.gameCover,
-      phase: "Queued",
-      rows: jobRows(job),
-    });
-  }
+  const phaseFor = (job: GameJob, rows: GameRow[]): string => {
+    if (job.status === "queued") return "Queued";
+    if (job.status === "extracting") {
+      const resolved = rows.filter((r) => r.item).length;
+      return resolved < rows.length ? `Getting links ${resolved}/${rows.length}` : "";
+    }
+    return "";
+  };
 
-  // Downloads not owned by an active/queued job: group finished games by title,
-  // keep manual (no game) downloads as loose rows.
+  const groups: RenderGroup[] = [...gameJobs]
+    .sort((a, b) => JOB_ORDER[a.status] - JOB_ORDER[b.status])
+    .map((job) => {
+      const rows = jobRows(job);
+      return {
+        key: job.url,
+        title: job.gameTitle,
+        cover: job.gameCover,
+        phase: phaseFor(job, rows),
+        rows,
+      };
+    });
+
+  // Downloads with a game but no job (e.g. restored after a restart): group by
+  // title. Manual (no game) downloads stay as loose rows.
   const byTitle = new Map<string, { cover: string; items: DownloadItem[] }>();
   const loose: DownloadItem[] = [];
   for (const item of items) {
@@ -104,6 +104,15 @@ export default function Downloads() {
   const handleClearFinished = () => {
     void clearFinished();
     dropFinished();
+    // Drop fully-finished game cards so they don't linger forever.
+    const store = useAppStore.getState();
+    for (const job of store.gameJobs) {
+      const rows = job.partUrls.map((u) => byFilename.get(filenameFromUrl(u)));
+      const allFinished =
+        job.status === "done" &&
+        rows.every((it) => !it || FINISHED_STATUSES.includes(it.status));
+      if (allFinished) store.removeJob(job.url);
+    }
   };
 
   return (

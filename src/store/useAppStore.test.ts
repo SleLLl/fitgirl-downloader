@@ -7,29 +7,27 @@ const reset = () =>
 describe("useAppStore", () => {
   beforeEach(reset);
 
-  it("extraction queue: enqueue, startNext (FIFO), finish", () => {
-    useAppStore.setState({ activeJob: null, extractionQueue: [] });
+  it("game jobs: enqueue (dedup), status, remove", () => {
+    useAppStore.setState({ gameJobs: [] });
     const job = (url: string) => ({
       url,
       gameTitle: url,
       gameCover: "",
       partUrls: [`${url}/p1`],
+      status: "queued" as const,
     });
     useAppStore.getState().enqueueJob(job("a"));
     useAppStore.getState().enqueueJob(job("b"));
-    expect(useAppStore.getState().extractionQueue.map((j) => j.url)).toEqual([
-      "a",
-      "b",
-    ]);
-    const started = useAppStore.getState().startNextJob();
-    expect(started?.url).toBe("a");
-    expect(useAppStore.getState().activeJob?.url).toBe("a");
-    expect(useAppStore.getState().extractionQueue.map((j) => j.url)).toEqual([
-      "b",
-    ]);
-    useAppStore.getState().finishActiveJob();
-    expect(useAppStore.getState().activeJob).toBeNull();
-    expect(useAppStore.getState().startNextJob()?.url).toBe("b");
+    useAppStore.getState().enqueueJob(job("a")); // duplicate URL ignored
+    expect(useAppStore.getState().gameJobs.map((j) => j.url)).toEqual(["a", "b"]);
+
+    useAppStore.getState().setJobStatus("a", "extracting");
+    expect(
+      useAppStore.getState().gameJobs.find((j) => j.url === "a")?.status
+    ).toBe("extracting");
+
+    useAppStore.getState().removeJob("a");
+    expect(useAppStore.getState().gameJobs.map((j) => j.url)).toEqual(["b"]);
   });
 
   it("togglePart flips one part's checked", () => {

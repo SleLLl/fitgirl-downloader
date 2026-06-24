@@ -1,3 +1,5 @@
+import { useState } from "react";
+import { ChevronDown, ChevronRight } from "lucide-react";
 import { DownloadRow } from "@/components/DownloadRow";
 import { formatBytes, type DownloadItem } from "@/lib/download";
 
@@ -25,9 +27,21 @@ export function GameGroup({
     downloaded
   )} / ${formatBytes(totalBytes)}`;
 
+  const [collapsed, setCollapsed] = useState(false);
+  const toggle = () => setCollapsed((c) => !c);
+
   return (
     <div className="game-group">
-      <div className="game-group-head">
+      <button
+        className="game-group-head"
+        onClick={toggle}
+        aria-expanded={!collapsed}
+      >
+        {collapsed ? (
+          <ChevronRight size={18} className="game-group-chevron" aria-hidden />
+        ) : (
+          <ChevronDown size={18} className="game-group-chevron" aria-hidden />
+        )}
         {cover && (
           <img
             className="game-group-cover"
@@ -36,23 +50,25 @@ export function GameGroup({
             loading="lazy"
           />
         )}
-        <div className="game-group-info">
+        <span className="game-group-info">
           <span className="game-group-title">{title}</span>
           <span className="game-group-meta">{meta}</span>
+        </span>
+      </button>
+      {!collapsed && (
+        <div className="game-group-rows">
+          {rows.map((row) =>
+            row.item ? (
+              <DownloadRow key={row.filename} item={row.item} />
+            ) : (
+              <div key={row.filename} className="pending-row">
+                <span className="pending-name">{row.filename}</span>
+                <span className="pending-status">waiting for link</span>
+              </div>
+            )
+          )}
         </div>
-      </div>
-      <div className="game-group-rows">
-        {rows.map((row) =>
-          row.item ? (
-            <DownloadRow key={row.filename} item={row.item} />
-          ) : (
-            <div key={row.filename} className="pending-row">
-              <span className="pending-name">{row.filename}</span>
-              <span className="pending-status">waiting for link</span>
-            </div>
-          )
-        )}
-      </div>
+      )}
     </div>
   );
 }

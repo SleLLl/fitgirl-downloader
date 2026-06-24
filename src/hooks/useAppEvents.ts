@@ -30,18 +30,18 @@ export function useAppEvents() {
     const unExtract = onExtractProgress((p) => {
       mergeResult(p);
       // Auto-queue each link as it resolves for the game currently extracting.
-      // Only one game extracts at a time, so a resolved link belongs to it.
       const st = useAppStore.getState();
+      const active = st.gameJobs.find((j) => j.status === "extracting");
       if (
-        st.activeJob &&
+        active &&
         st.downloadDir &&
         p.status === "done" &&
         p.directUrl &&
-        st.activeJob.partUrls.includes(p.sourceUrl)
+        active.partUrls.includes(p.sourceUrl)
       ) {
         queuePart(p, st.downloadDir, {
-          gameTitle: st.activeJob.gameTitle,
-          gameCover: st.activeJob.gameCover,
+          gameTitle: active.gameTitle,
+          gameCover: active.gameCover,
         });
       }
       if (st.cancelled) return;

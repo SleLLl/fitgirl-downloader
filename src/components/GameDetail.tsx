@@ -9,8 +9,6 @@ import { enqueueGame } from "@/lib/downloadQueue";
 import { useAppStore } from "@/store/useAppStore";
 import "./GameDetail.css";
 
-const ACTIVE_STATUSES = ["downloading", "queued", "paused"];
-
 export function GameDetail({
   pageUrl,
   onBack,
@@ -21,9 +19,7 @@ export function GameDetail({
   const { data: details, error, isLoading, refetch } = useGameDetails(pageUrl);
   const parts = useAppStore((s) => s.parts);
   const busy = useAppStore((s) => s.busy);
-  const activeJob = useAppStore((s) => s.activeJob);
-  const queue = useAppStore((s) => s.extractionQueue);
-  const downloads = useAppStore((s) => s.downloads);
+  const gameJobs = useAppStore((s) => s.gameJobs);
   const navigate = useNavigate();
   const { onFetch } = useExtraction();
   const { ensureDir } = useDownloads();
@@ -47,15 +43,9 @@ export function GameDetail({
     if (details) useAppStore.getState().setGame(details.title, details.coverUrl);
   }, [details]);
 
-  // This game is already being handled (extracting, queued, or actively
-  // downloading) — don't let the user re-queue it.
-  const inProgress =
-    activeJob?.url === pageUrl ||
-    queue.some((j) => j.url === pageUrl) ||
-    (!!details &&
-      Object.values(downloads).some(
-        (d) => d.gameTitle === details.title && ACTIVE_STATUSES.includes(d.status)
-      ));
+  // This game already has a card on the Downloads page (queued / extracting /
+  // done) — send the user there instead of letting them re-queue it.
+  const inProgress = gameJobs.some((j) => j.url === pageUrl);
 
   const checkedCount = parts.filter((p) => p.checked).length;
   const hasParts = parts.length > 0;

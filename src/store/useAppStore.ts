@@ -5,14 +5,19 @@ import type { Settings } from "@/lib/settings";
 
 export type Part = { url: string; checked: boolean };
 
-/// A game queued for "extract links + download": the selected part page URLs and
-/// the metadata to attach to its download jobs. One extracts at a time (single
-/// WebView); the rest wait in `extractionQueue`.
+export type JobStatus = "queued" | "extracting" | "done";
+
+/// A game submitted for "extract links + download": the selected part page URLs
+/// and the metadata for its download jobs. Persists for the lifetime of the
+/// game's card on the Downloads page (so the full file list stays visible),
+/// regardless of extraction progress. One game extracts at a time (single
+/// WebView); the rest stay `queued`.
 export type GameJob = {
   url: string;
   gameTitle: string;
   gameCover: string;
   partUrls: string[];
+  status: JobStatus;
 };
 
 /// Cached extraction state for one game URL (session-scoped; survives navigation,
@@ -45,11 +50,9 @@ type AppState = {
   results: Record<string, ExtractProgress>;
   /// Resolved extraction state per game URL, reused across navigation.
   extractionCache: Record<string, CacheEntry>;
-  /// The game currently extracting links; its resolved links auto-queue as
-  /// downloads with this metadata. Null when nothing is extracting.
-  activeJob: GameJob | null;
-  /// Games selected for download, waiting their turn to extract (FIFO).
-  extractionQueue: GameJob[];
+  /// Submitted games (queued / extracting / done), in submission order. Each
+  /// keeps its full selected-file list so its Downloads card never loses rows.
+  gameJobs: GameJob[];
   downloadDir: string | null;
   downloads: Record<string, DownloadItem>;
   settings: Settings | null;
@@ -73,12 +76,10 @@ type AppState = {
   mergeResult: (p: ExtractProgress) => void;
   /// Replace the active parts+results (used to hydrate from the cache).
   loadExtraction: (parts: Part[], results: Record<string, ExtractProgress>) => void;
-  /// Append a game to the extraction queue (does not start it).
+  /// Append a game (status `queued`); ignored if its URL is already present.
   enqueueJob: (job: GameJob) => void;
-  /// Move the head of the queue into `activeJob` and return it (null if empty).
-  startNextJob: () => GameJob | null;
-  /// Clear the active job (extraction finished).
-  finishActiveJob: () => void;
+  setJobStatus: (url: string, status: JobStatus) => void;
+  removeJob: (url: string) => void;
   clearExtractionCache: () => void;
   setDownloadDir: (dir: string | null) => void;
   mergeDownload: (item: DownloadItem) => void;
@@ -90,7 +91,7 @@ type AppState = {
   resetExtraction: () => void;
 };
 
-export const useAppStore = create<AppState>((set, get) => ({
+export const useAppStore = create<AppState>((set) => ({
   url: "https://fitgirl-repacks.site/grand-theft-auto-v/",
   gameTitle: "",
   gameCover: "",
@@ -100,8 +101,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   parts: [],
   results: {},
   extractionCache: {},
-  activeJob: null,
-  extractionQueue: [],
+  gameJobs: [],
   downloadDir: null,
   downloads: {},
   settings: null,
@@ -119,7 +119,10 @@ export const useAppStore = create<AppState>((set, get) => ({
       selectionAnchor: null,
       extractionCache: {
         ...s.extractionCache,
-        [s.activeJob?.url ?? s.url]: { parts, results: {} },
+        [s.gameJobs.find((j) => j.status === "extracting")?.url ?? s.url]: {
+          parts,
+          results: {},
+        },
       },
     })),
   togglePart: (index) =>
@@ -153,7 +156,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   mergeResult: (p) =>
     set((s) => {
       const results = { ...s.results, [p.sourceUrl]: p };
-      const key = s.activeJob?.url ?? s.url;
+      const key =
+        s.gameJobs.find((j) => j.status === "extracting")?.url ?? s.url;
       const cached = s.extractionCache[key];
       if (!cached) return { results };
       // Accumulate into the cache independently of the active results (which a
@@ -171,15 +175,17 @@ export const useAppStore = create<AppState>((set, get) => ({
     }),
   loadExtraction: (parts, results) => set({ parts, results, selectionAnchor: null }),
   enqueueJob: (job) =>
-    set((s) => ({ extractionQueue: [...s.extractionQueue, job] })),
-  startNextJob: () => {
-    const queue = get().extractionQueue;
-    const next = queue[0];
-    if (!next) return null;
-    set({ activeJob: next, extractionQueue: queue.slice(1) });
-    return next;
-  },
-  finishActiveJob: () => set({ activeJob: null }),
+    set((s) =>
+      s.gameJobs.some((j) => j.url === job.url)
+        ? s
+        : { gameJobs: [...s.gameJobs, job] }
+    ),
+  setJobStatus: (url, status) =>
+    set((s) => ({
+      gameJobs: s.gameJobs.map((j) => (j.url === url ? { ...j, status } : j)),
+    })),
+  removeJob: (url) =>
+    set((s) => ({ gameJobs: s.gameJobs.filter((j) => j.url !== url) })),
   clearExtractionCache: () => set({ extractionCache: {} }),
   setDownloadDir: (downloadDir) => set({ downloadDir }),
   mergeDownload: (item) =>
