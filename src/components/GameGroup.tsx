@@ -29,7 +29,7 @@ export function GameGroup({
   phase: string;
   rows: GameRow[];
 }) {
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(true);
   const toggle = () => setCollapsed((c) => !c);
 
   const items = rows
