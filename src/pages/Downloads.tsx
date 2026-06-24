@@ -75,10 +75,12 @@ export default function Downloads() {
         return { filename, item, label: "" };
       }
       // No download row yet — describe where this file is in the pipeline.
+      // (A game whose downloads were all removed is pruned by the effect above,
+      // so a resolved link with no row here just means the download is forming.)
       const r = results[u];
       let label = "waiting for link";
       if (r?.directUrl) {
-        label = job.status === "done" ? "removed" : "queued for download";
+        label = "queued for download";
       } else if (r?.status === "processing") {
         label = "getting link…";
       } else if (r?.status === "failed") {

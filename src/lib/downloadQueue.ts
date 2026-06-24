@@ -24,6 +24,7 @@ function queueCachedAndPending(job: GameJob, dir: string): string[] {
     }
     const filename = filenameFromUrl(url);
     if (!existing.has(filename)) {
+      existing.add(filename);
       void startDownloads(
         [
           {
@@ -34,7 +35,10 @@ function queueCachedAndPending(job: GameJob, dir: string): string[] {
           },
         ],
         dir
-      );
+      ).then((created) => {
+        const merge = useAppStore.getState().mergeDownload;
+        created.forEach(merge);
+      });
     }
   }
   return pending;

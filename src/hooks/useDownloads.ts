@@ -39,7 +39,9 @@ export function useDownloads() {
       (d) => d.filename === filename
     );
     if (exists) return;
-    void startDownloads([{ url: p.directUrl, filename, ...meta }], dir);
+    void startDownloads([{ url: p.directUrl, filename, ...meta }], dir).then(
+      (created) => created.forEach(s.getState().mergeDownload)
+    );
   }
 
   async function onDownloadAll() {
