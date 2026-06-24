@@ -17,6 +17,10 @@ export type ExtractionSlice = {
   results: Record<string, ExtractProgress>;
   /// Resolved extraction state per game URL, reused across navigation.
   extractionCache: Record<string, CacheEntry>;
+  /// Which game URL each part page URL belongs to, so a resolved link is always
+  /// cached under its own game — even if extractions for different games
+  /// interleave or the active URL has since changed.
+  partOwner: Record<string, string>;
   /// Index of the last part toggled without Shift — the range-select anchor.
   selectionAnchor: number | null;
 
@@ -36,15 +40,11 @@ export type ExtractionSlice = {
   mergeResult: (p: ExtractProgress) => void;
   /// Replace the active parts+results (used to hydrate from the cache).
   loadExtraction: (parts: Part[], results: Record<string, ExtractProgress>) => void;
+  /// Record which game owns these part URLs (so their links cache correctly).
+  setPartOwner: (urls: string[], owner: string) => void;
   clearExtractionCache: () => void;
   resetExtraction: () => void;
 };
-
-/// The URL the link cache is keyed under: the extracting game if any (so writes
-/// land on the right game even after navigation), else the active URL.
-function cacheKey(s: AppStore): string {
-  return s.gameJobs.find((j) => j.status === "extracting")?.url ?? s.url;
-}
 
 export const createExtractionSlice: StateCreator<
   AppStore,
@@ -61,6 +61,7 @@ export const createExtractionSlice: StateCreator<
   parts: [],
   results: {},
   extractionCache: {},
+  partOwner: {},
   selectionAnchor: null,
 
   setUrl: (url) => set({ url }),
@@ -72,9 +73,14 @@ export const createExtractionSlice: StateCreator<
     set((s) => ({
       parts,
       selectionAnchor: null,
+      // A manual fetch is always for the active URL: that game owns these parts.
+      partOwner: {
+        ...s.partOwner,
+        ...Object.fromEntries(parts.map((p) => [p.url, s.url])),
+      },
       extractionCache: {
         ...s.extractionCache,
-        [cacheKey(s)]: { parts, results: {} },
+        [s.url]: { parts, results: {} },
       },
     })),
   togglePart: (index) =>
@@ -108,11 +114,11 @@ export const createExtractionSlice: StateCreator<
   mergeResult: (p) =>
     set((s) => {
       const results = { ...s.results, [p.sourceUrl]: p };
-      const key = cacheKey(s);
+      // Cache under the part's owning game, never a global guess — so a resolved
+      // link can't leak into another game's cache.
+      const key = s.partOwner[p.sourceUrl] ?? s.url;
       const cached = s.extractionCache[key];
       if (!cached) return { results };
-      // Accumulate into the cache independently of the active results (which a
-      // navigation may have reset), so the cache never loses resolved links.
       return {
         results,
         extractionCache: {
@@ -126,6 +132,13 @@ export const createExtractionSlice: StateCreator<
     }),
   loadExtraction: (parts, results) =>
     set({ parts, results, selectionAnchor: null }),
+  setPartOwner: (urls, owner) =>
+    set((s) => ({
+      partOwner: {
+        ...s.partOwner,
+        ...Object.fromEntries(urls.map((u) => [u, owner])),
+      },
+    })),
   clearExtractionCache: () => set({ extractionCache: {} }),
   resetExtraction: () => set({ parts: [], results: {} }),
 });

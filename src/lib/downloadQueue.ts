@@ -58,6 +58,9 @@ export async function enqueueGame(job: Omit<GameJob, "status">): Promise<void> {
         .gameJobs.find((j) => j.status === "queued");
       if (!next) break;
       useAppStore.getState().setJobStatus(next.url, "extracting");
+      // Tag every part with its owning game so resolved links cache correctly,
+      // even if a manual "Get links" for another game runs meanwhile.
+      useAppStore.getState().setPartOwner(next.partUrls, next.url);
       const dir = useAppStore.getState().downloadDir;
       const pending = dir ? queueCachedAndPending(next, dir) : next.partUrls;
       if (pending.length > 0) {
