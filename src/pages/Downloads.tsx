@@ -55,16 +55,19 @@ export default function Downloads() {
   const claimed = new Set<string>();
   const jobRows = (job: GameJob): GameRow[] => {
     const results = extractionCache[job.url]?.results ?? {};
-    return job.partUrls.map((u) => {
+    const rows: GameRow[] = [];
+    for (const u of job.partUrls) {
       const filename = filenameFromUrl(u);
       const item = byFilename.get(filename);
       if (item) {
         claimed.add(item.id);
-        return { filename, item, label: "" };
+        rows.push({ filename, item, label: "" });
+        continue;
       }
-      // No download row yet — describe where this file is in the pipeline.
-      // (A game whose downloads were all removed is pruned by the effect above,
-      // so a resolved link with no row here just means the download is forming.)
+      // Once extraction is done, a part with no download row was removed by the
+      // user — drop it instead of resurrecting a stale "queued" placeholder.
+      if (job.status === "done") continue;
+      // Still queued/extracting: show the file up front with its pipeline state.
       const r = results[u];
       let label = "waiting for link";
       if (r?.directUrl) {
@@ -78,8 +81,9 @@ export default function Downloads() {
       } else if (job.status === "extracting") {
         label = "getting link…";
       }
-      return { filename, item: undefined, label };
-    });
+      rows.push({ filename, item: undefined, label });
+    }
+    return rows;
   };
 
   const phaseFor = (job: GameJob, rows: GameRow[]): string => {
