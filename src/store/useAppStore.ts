@@ -137,11 +137,18 @@ export const useAppStore = create<AppState>((set) => ({
       const results = { ...s.results, [p.sourceUrl]: p };
       const key = s.autoDownload?.url ?? s.url;
       const cached = s.extractionCache[key];
+      if (!cached) return { results };
+      // Accumulate into the cache independently of the active results (which a
+      // navigation may have reset), so the cache never loses resolved links.
       return {
         results,
-        extractionCache: cached
-          ? { ...s.extractionCache, [key]: { ...cached, results } }
-          : s.extractionCache,
+        extractionCache: {
+          ...s.extractionCache,
+          [key]: {
+            parts: cached.parts,
+            results: { ...cached.results, [p.sourceUrl]: p },
+          },
+        },
       };
     }),
   loadExtraction: (parts, results) => set({ parts, results, selectionAnchor: null }),
