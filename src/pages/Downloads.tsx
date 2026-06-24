@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   clearFinished,
@@ -30,10 +31,23 @@ type RenderGroup = {
 export default function Downloads() {
   const downloads = useAppStore((s) => s.downloads);
   const gameJobs = useAppStore((s) => s.gameJobs);
+  const extractionCache = useAppStore((s) => s.extractionCache);
   const dropFinished = useAppStore((s) => s.dropFinished);
 
   const items = Object.values(downloads);
   const byFilename = new Map(items.map((i) => [i.filename, i]));
+
+  // Prune finished game cards whose downloads are all gone (e.g. cancelled +
+  // removed), so they don't linger as rows of placeholders.
+  useEffect(() => {
+    const store = useAppStore.getState();
+    const names = new Set(Object.values(store.downloads).map((d) => d.filename));
+    for (const job of store.gameJobs) {
+      if (job.status !== "done") continue;
+      const hasDownload = job.partUrls.some((u) => names.has(filenameFromUrl(u)));
+      if (!hasDownload) store.removeJob(job.url);
+    }
+  }, [gameJobs, downloads]);
 
   const resumableCount = items.filter((i) =>
     RESUMABLE_STATUSES.includes(i.status)
@@ -51,13 +65,32 @@ export default function Downloads() {
   // Each game job renders its full selected-file list (placeholder until a link
   // resolves into a real download), so rows never disappear mid-flight.
   const claimed = new Set<string>();
-  const jobRows = (job: GameJob): GameRow[] =>
-    job.partUrls.map((u) => {
+  const jobRows = (job: GameJob): GameRow[] => {
+    const results = extractionCache[job.url]?.results ?? {};
+    return job.partUrls.map((u) => {
       const filename = filenameFromUrl(u);
       const item = byFilename.get(filename);
-      if (item) claimed.add(item.id);
-      return { filename, item };
+      if (item) {
+        claimed.add(item.id);
+        return { filename, item, label: "" };
+      }
+      // No download row yet — describe where this file is in the pipeline.
+      const r = results[u];
+      let label = "waiting for link";
+      if (r?.directUrl) {
+        label = job.status === "done" ? "removed" : "queued for download";
+      } else if (r?.status === "processing") {
+        label = "getting link…";
+      } else if (r?.status === "failed") {
+        label = "link failed";
+      } else if (job.status === "queued") {
+        label = "queued";
+      } else if (job.status === "extracting") {
+        label = "getting link…";
+      }
+      return { filename, item: undefined, label };
     });
+  };
 
   const phaseFor = (job: GameJob, rows: GameRow[]): string => {
     if (job.status === "queued") return "Queued";
@@ -101,7 +134,7 @@ export default function Downloads() {
       title,
       cover: g.cover,
       phase: "",
-      rows: g.items.map((i) => ({ filename: i.filename, item: i })),
+      rows: g.items.map((i) => ({ filename: i.filename, item: i, label: "" })),
     });
   }
 
@@ -112,15 +145,8 @@ export default function Downloads() {
   const handleClearFinished = () => {
     void clearFinished();
     dropFinished();
-    // Drop fully-finished game cards so they don't linger forever.
-    const store = useAppStore.getState();
-    for (const job of store.gameJobs) {
-      const rows = job.partUrls.map((u) => byFilename.get(filenameFromUrl(u)));
-      const allFinished =
-        job.status === "done" &&
-        rows.every((it) => !it || FINISHED_STATUSES.includes(it.status));
-      if (allFinished) store.removeJob(job.url);
-    }
+    // Fully-finished game cards are pruned by the effect above once their
+    // downloads are gone.
   };
 
   return (

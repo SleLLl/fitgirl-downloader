@@ -9,7 +9,7 @@ import {
   type DownloadItem,
 } from "@/lib/download";
 
-export type GameRow = { filename: string; item?: DownloadItem };
+export type GameRow = { filename: string; item?: DownloadItem; label: string };
 
 const PAUSABLE_STATUSES = ["downloading", "queued"];
 const RESUMABLE_STATUSES = ["paused", "failed"];
@@ -96,7 +96,7 @@ export function GameGroup({
             ) : (
               <div key={row.filename} className="pending-row">
                 <span className="pending-name">{row.filename}</span>
-                <span className="pending-status">waiting for link</span>
+                <span className="pending-status">{row.label}</span>
               </div>
             )
           )}
