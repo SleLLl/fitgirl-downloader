@@ -21,7 +21,7 @@ export function GameDetail({
   const busy = useAppStore((s) => s.busy);
   const gameJobs = useAppStore((s) => s.gameJobs);
   const navigate = useNavigate();
-  const { onFetch } = useExtraction();
+  const { onFetch, onExtract } = useExtraction();
   const { ensureDir } = useDownloads();
 
   // Point the extraction context at this game; show cached parts if we already
@@ -54,6 +54,18 @@ export function GameDetail({
   const handleView = () => navigate({ to: "/downloads" });
   const handleGetLinks = () => {
     void onFetch();
+  };
+  // Jump to the link-resolver page and auto-run extraction for this game, so the
+  // user gets copyable direct links without manual paste/fetch/extract steps.
+  const handleResolveLinks = () => {
+    const store = useAppStore.getState();
+    store.setUrl(pageUrl);
+    store.setGame("", "");
+    navigate({ to: "/extract" });
+    void (async () => {
+      await onFetch();
+      if (useAppStore.getState().parts.length > 0) await onExtract();
+    })();
   };
   const handleSelectAll = () => useAppStore.getState().setAllChecked(true);
   const handleSelectNone = () => useAppStore.getState().setAllChecked(false);
@@ -88,6 +100,11 @@ export function GameDetail({
             Get download links
           </Button>
         ) : null}
+        {details && (
+          <Button variant="secondary" onClick={handleResolveLinks} disabled={busy}>
+            Get links
+          </Button>
+        )}
         <a
           className="detail-link"
           href={pageUrl}

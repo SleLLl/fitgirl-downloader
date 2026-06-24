@@ -14,10 +14,16 @@
   @apply border border-border rounded-md p-3 space-y-2;
 }
 .game-group-head {
-  @apply flex w-full items-center gap-3 text-left cursor-pointer rounded-md hover:bg-muted;
+  @apply flex items-center gap-2;
+}
+.game-group-toggle {
+  @apply flex flex-1 min-w-0 items-center gap-3 text-left cursor-pointer rounded-md p-1 hover:bg-muted;
 }
 .game-group-chevron {
   @apply shrink-0 text-muted-foreground;
+}
+.game-group-actions {
+  @apply flex gap-2 shrink-0;
 }
 .game-group-cover {
   @apply w-10 h-14 object-cover rounded shrink-0;

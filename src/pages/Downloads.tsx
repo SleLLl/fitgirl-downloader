@@ -1,5 +1,10 @@
 import { Button } from "@/components/ui/button";
-import { clearFinished, formatBytes, formatSpeed } from "@/lib/download";
+import {
+  clearFinished,
+  formatBytes,
+  formatSpeed,
+  pauseDownload,
+} from "@/lib/download";
 import type { DownloadItem } from "@/lib/download";
 import { filenameFromUrl } from "@/lib/format";
 import { resumeAll } from "@/lib/settings";
@@ -9,6 +14,7 @@ import { useAppStore, type GameJob } from "@/store/useAppStore";
 import "./Downloads.css";
 
 const RESUMABLE_STATUSES = ["paused", "failed"];
+const PAUSABLE_STATUSES = ["downloading", "queued"];
 const FINISHED_STATUSES = ["done", "failed", "cancelled"];
 const ACTIVE_STATUSES = ["downloading", "queued", "paused"];
 const JOB_ORDER: Record<string, number> = { extracting: 0, queued: 1, done: 2 };
@@ -32,6 +38,7 @@ export default function Downloads() {
   const resumableCount = items.filter((i) =>
     RESUMABLE_STATUSES.includes(i.status)
   ).length;
+  const pausable = items.filter((i) => PAUSABLE_STATUSES.includes(i.status));
   const finishedCount = items.filter((i) =>
     FINISHED_STATUSES.includes(i.status)
   ).length;
@@ -101,6 +108,7 @@ export default function Downloads() {
   const isEmpty = groups.length === 0 && loose.length === 0;
 
   const handleResumeAll = () => resumeAll();
+  const handlePauseAll = () => pausable.forEach((i) => void pauseDownload(i.id));
   const handleClearFinished = () => {
     void clearFinished();
     dropFinished();
@@ -123,6 +131,11 @@ export default function Downloads() {
           {resumableCount > 0 && (
             <Button variant="secondary" onClick={handleResumeAll}>
               Resume all ({resumableCount})
+            </Button>
+          )}
+          {pausable.length > 0 && (
+            <Button variant="secondary" onClick={handlePauseAll}>
+              Pause all ({pausable.length})
             </Button>
           )}
           {finishedCount > 0 && (
