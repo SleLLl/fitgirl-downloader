@@ -63,7 +63,13 @@ export function GameDetail({
     store.setGame("", "");
     navigate({ to: "/extract" });
     void (async () => {
-      await onFetch();
+      // Reuse cached parts/links if we have them; only extract the rest.
+      const cached = useAppStore.getState().extractionCache[pageUrl];
+      if (cached && cached.parts.length) {
+        store.loadExtraction(cached.parts, cached.results);
+      } else {
+        await onFetch();
+      }
       if (useAppStore.getState().parts.length > 0) await onExtract();
     })();
   };

@@ -28,6 +28,10 @@
 .library-info {
   @apply flex flex-col gap-0.5 min-w-0 flex-1;
 }
+.library-card .btn,
+.library-card button {
+  @apply shrink-0;
+}
 .library-name {
   @apply text-sm font-medium truncate;
 }

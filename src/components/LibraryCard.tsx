@@ -1,12 +1,18 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { formatBytes } from "@/lib/download";
-import { revealGame, type LibraryGame } from "@/lib/library";
+import { removeLibraryGame, revealGame, type LibraryGame } from "@/lib/library";
 
 export function LibraryCard({ game }: { game: LibraryGame }) {
   const partsLabel = game.parts === 1 ? "1 file" : `${game.parts} files`;
+  const queryClient = useQueryClient();
 
   const handleOpen = () => {
     void revealGame(game);
+  };
+  const handleRemove = async () => {
+    await removeLibraryGame(game);
+    await queryClient.invalidateQueries({ queryKey: ["library"] });
   };
 
   return (
@@ -28,6 +34,9 @@ export function LibraryCard({ game }: { game: LibraryGame }) {
       </div>
       <Button variant="secondary" onClick={handleOpen}>
         Open folder
+      </Button>
+      <Button variant="destructive" onClick={handleRemove}>
+        Remove
       </Button>
     </div>
   );

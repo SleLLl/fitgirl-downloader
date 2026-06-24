@@ -20,6 +20,8 @@ pub struct LibraryGame {
     pub cover_url: String,
     /// A concrete file to reveal in the file manager.
     pub sample_path: String,
+    /// Download-row ids that make up this game (used to remove it).
+    pub ids: Vec<String>,
 }
 
 /// Strip the multipart/extension suffix to get a repack's base name.
@@ -58,6 +60,7 @@ pub fn group(rows: Vec<DownloadRow>) -> Vec<LibraryGame> {
         if let Some(g) = out.iter_mut().find(|g| g.dir == r.dir && g.name == name) {
             g.parts += 1;
             g.total_bytes += r.total_bytes;
+            g.ids.push(r.id);
             if g.cover_url.is_empty() {
                 g.cover_url = r.game_cover.clone();
             }
@@ -74,6 +77,7 @@ pub fn group(rows: Vec<DownloadRow>) -> Vec<LibraryGame> {
             total_bytes: r.total_bytes,
             cover_url: r.game_cover,
             sample_path: sample,
+            ids: vec![r.id],
         });
     }
     out

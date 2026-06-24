@@ -22,6 +22,7 @@ vi.mock("@/lib/library", async () => {
           totalBytes: 3 * 1024 * 1024,
           coverUrl: "",
           samplePath: "/games/Cyberpunk.2077.part01.rar",
+          ids: ["dl1", "dl2", "dl3"],
         },
       ])
     ),
