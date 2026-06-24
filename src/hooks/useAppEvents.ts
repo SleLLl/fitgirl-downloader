@@ -29,14 +29,19 @@ export function useAppEvents() {
     });
     const unExtract = onExtractProgress((p) => {
       mergeResult(p);
-      // Auto-queue each link as it resolves, when the "Get links & download"
-      // flow armed a game and a folder is set. Only one extraction runs at a
-      // time, so a resolved link belongs to the armed game.
+      // Auto-queue each link as it resolves for the game currently extracting.
+      // Only one game extracts at a time, so a resolved link belongs to it.
       const st = useAppStore.getState();
-      if (st.autoDownload && st.downloadDir && p.status === "done" && p.directUrl) {
+      if (
+        st.activeJob &&
+        st.downloadDir &&
+        p.status === "done" &&
+        p.directUrl &&
+        st.activeJob.partUrls.includes(p.sourceUrl)
+      ) {
         queuePart(p, st.downloadDir, {
-          gameTitle: st.autoDownload.gameTitle,
-          gameCover: st.autoDownload.gameCover,
+          gameTitle: st.activeJob.gameTitle,
+          gameCover: st.activeJob.gameCover,
         });
       }
       if (st.cancelled) return;

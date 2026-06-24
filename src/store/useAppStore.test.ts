@@ -7,6 +7,31 @@ const reset = () =>
 describe("useAppStore", () => {
   beforeEach(reset);
 
+  it("extraction queue: enqueue, startNext (FIFO), finish", () => {
+    useAppStore.setState({ activeJob: null, extractionQueue: [] });
+    const job = (url: string) => ({
+      url,
+      gameTitle: url,
+      gameCover: "",
+      partUrls: [`${url}/p1`],
+    });
+    useAppStore.getState().enqueueJob(job("a"));
+    useAppStore.getState().enqueueJob(job("b"));
+    expect(useAppStore.getState().extractionQueue.map((j) => j.url)).toEqual([
+      "a",
+      "b",
+    ]);
+    const started = useAppStore.getState().startNextJob();
+    expect(started?.url).toBe("a");
+    expect(useAppStore.getState().activeJob?.url).toBe("a");
+    expect(useAppStore.getState().extractionQueue.map((j) => j.url)).toEqual([
+      "b",
+    ]);
+    useAppStore.getState().finishActiveJob();
+    expect(useAppStore.getState().activeJob).toBeNull();
+    expect(useAppStore.getState().startNextJob()?.url).toBe("b");
+  });
+
   it("togglePart flips one part's checked", () => {
     useAppStore.setState({
       parts: [

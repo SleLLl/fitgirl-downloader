@@ -31,6 +31,12 @@
 .detail-download {
   @apply space-y-3 border border-border rounded-md p-3;
 }
+.detail-select-bar {
+  @apply flex items-center gap-2;
+}
+.detail-select-count {
+  @apply text-sm text-muted-foreground flex-1;
+}
 .detail-shots {
   @apply grid grid-cols-2 sm:grid-cols-3 gap-2;
 }

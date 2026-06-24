@@ -1,98 +1,103 @@
 import { Button } from "@/components/ui/button";
 import { clearFinished, formatBytes, formatSpeed } from "@/lib/download";
 import type { DownloadItem } from "@/lib/download";
+import { filenameFromUrl } from "@/lib/format";
 import { resumeAll } from "@/lib/settings";
 import { DownloadRow } from "@/components/DownloadRow";
-import { GameGroup } from "@/components/GameGroup";
-import { useAppStore } from "@/store/useAppStore";
+import { GameGroup, type GameRow } from "@/components/GameGroup";
+import { useAppStore, type GameJob } from "@/store/useAppStore";
 import "./Downloads.css";
 
 const RESUMABLE_STATUSES = ["paused", "failed"];
 const FINISHED_STATUSES = ["done", "failed", "cancelled"];
 const ACTIVE_STATUSES = ["downloading", "queued", "paused"];
 
-type Group = { title: string; cover: string; items: DownloadItem[] };
+type RenderGroup = {
+  key: string;
+  title: string;
+  cover: string;
+  phase: string;
+  rows: GameRow[];
+};
 
-/// Split downloads into per-game groups (by gameTitle) and loose items (manual /
-/// "Add by link" downloads with no game). Active game first, then by recency.
-function groupDownloads(
-  items: DownloadItem[],
-  activeTitle: string | null
-): { groups: Group[]; loose: DownloadItem[] } {
-  const byTitle = new Map<string, Group>();
+export default function Downloads() {
+  const downloads = useAppStore((s) => s.downloads);
+  const activeJob = useAppStore((s) => s.activeJob);
+  const queue = useAppStore((s) => s.extractionQueue);
+  const dropFinished = useAppStore((s) => s.dropFinished);
+
+  const items = Object.values(downloads);
+  const byFilename = new Map(items.map((i) => [i.filename, i]));
+
+  const resumableCount = items.filter((i) =>
+    RESUMABLE_STATUSES.includes(i.status)
+  ).length;
+  const finishedCount = items.filter((i) =>
+    FINISHED_STATUSES.includes(i.status)
+  ).length;
+  const activeItems = items.filter((i) => ACTIVE_STATUSES.includes(i.status));
+  const totalSpeed = activeItems.reduce((s, i) => s + i.speedBps, 0);
+  const sumTotal = activeItems.reduce((s, i) => s + i.totalBytes, 0);
+  const sumDone = activeItems.reduce((s, i) => s + i.downloadedBytes, 0);
+  const overallPercent = sumTotal > 0 ? Math.floor((sumDone / sumTotal) * 100) : 0;
+
+  // Build the rows for a job from its selected parts, matching each to a live
+  // download by filename (placeholder until its link resolves).
+  const claimed = new Set<string>();
+  const jobRows = (job: GameJob): GameRow[] =>
+    job.partUrls.map((u) => {
+      const filename = filenameFromUrl(u);
+      const item = byFilename.get(filename);
+      if (item) claimed.add(item.id);
+      return { filename, item };
+    });
+
+  const groups: RenderGroup[] = [];
+  if (activeJob) {
+    const rows = jobRows(activeJob);
+    const resolved = rows.filter((r) => r.item).length;
+    groups.push({
+      key: activeJob.url,
+      title: activeJob.gameTitle,
+      cover: activeJob.gameCover,
+      phase: resolved < rows.length ? `Getting links ${resolved}/${rows.length}` : "",
+      rows,
+    });
+  }
+  for (const job of queue) {
+    groups.push({
+      key: job.url,
+      title: job.gameTitle,
+      cover: job.gameCover,
+      phase: "Queued",
+      rows: jobRows(job),
+    });
+  }
+
+  // Downloads not owned by an active/queued job: group finished games by title,
+  // keep manual (no game) downloads as loose rows.
+  const byTitle = new Map<string, { cover: string; items: DownloadItem[] }>();
   const loose: DownloadItem[] = [];
   for (const item of items) {
+    if (claimed.has(item.id)) continue;
     if (!item.gameTitle) {
       loose.push(item);
       continue;
     }
-    const group = byTitle.get(item.gameTitle);
-    if (group) {
-      group.items.push(item);
-      if (!group.cover && item.gameCover) group.cover = item.gameCover;
-    } else {
-      byTitle.set(item.gameTitle, {
-        title: item.gameTitle,
-        cover: item.gameCover,
-        items: [item],
-      });
-    }
+    const g = byTitle.get(item.gameTitle);
+    if (g) g.items.push(item);
+    else byTitle.set(item.gameTitle, { cover: item.gameCover, items: [item] });
   }
-  const groups = [...byTitle.values()];
-  groups.sort((a, b) => {
-    if (a.title === activeTitle) return -1;
-    if (b.title === activeTitle) return 1;
-    return 0;
-  });
-  return { groups, loose };
-}
-
-export default function Downloads() {
-  const downloads = useAppStore((s) => s.downloads);
-  const autoDownload = useAppStore((s) => s.autoDownload);
-  const extractionCache = useAppStore((s) => s.extractionCache);
-  const dropFinished = useAppStore((s) => s.dropFinished);
-
-  const items = Object.values(downloads);
-  const resumableCount = items.filter((item) =>
-    RESUMABLE_STATUSES.includes(item.status)
-  ).length;
-  const finishedCount = items.filter((item) =>
-    FINISHED_STATUSES.includes(item.status)
-  ).length;
-
-  const activeItems = items.filter((item) =>
-    ACTIVE_STATUSES.includes(item.status)
-  );
-  const totalSpeed = activeItems.reduce((sum, item) => sum + item.speedBps, 0);
-  const totalBytes = activeItems.reduce((sum, item) => sum + item.totalBytes, 0);
-  const downloadedBytes = activeItems.reduce(
-    (sum, item) => sum + item.downloadedBytes,
-    0
-  );
-  const overallPercent =
-    totalBytes > 0 ? Math.floor((downloadedBytes / totalBytes) * 100) : 0;
-
-  // The game currently resolving links (if any) gets a "Getting links X/N" phase
-  // and is surfaced even before its first download exists.
-  const cached = autoDownload ? extractionCache[autoDownload.url] : undefined;
-  const gettingLinks = autoDownload
-    ? {
-        got: cached
-          ? Object.values(cached.results).filter((r) => r.directUrl).length
-          : 0,
-        total: cached?.parts.length ?? 0,
-      }
-    : null;
-
-  const { groups, loose } = groupDownloads(items, autoDownload?.gameTitle ?? null);
-  if (autoDownload && !groups.some((g) => g.title === autoDownload.gameTitle)) {
-    groups.unshift({
-      title: autoDownload.gameTitle,
-      cover: autoDownload.gameCover,
-      items: [],
+  for (const [title, g] of byTitle) {
+    groups.push({
+      key: title,
+      title,
+      cover: g.cover,
+      phase: "",
+      rows: g.items.map((i) => ({ filename: i.filename, item: i })),
     });
   }
+
   const isEmpty = groups.length === 0 && loose.length === 0;
 
   const handleResumeAll = () => resumeAll();
@@ -120,21 +125,18 @@ export default function Downloads() {
       </div>
       {activeItems.length > 0 && (
         <div className="downloads-summary">
-          ↓ {formatSpeed(totalSpeed)} · {formatBytes(downloadedBytes)} /{" "}
-          {formatBytes(totalBytes)} ({overallPercent}%) · {activeItems.length}{" "}
-          active
+          ↓ {formatSpeed(totalSpeed)} · {formatBytes(sumDone)} /{" "}
+          {formatBytes(sumTotal)} ({overallPercent}%) · {activeItems.length} active
         </div>
       )}
       {isEmpty && <p className="downloads-empty">No downloads yet.</p>}
-      {groups.map((group) => (
+      {groups.map((g) => (
         <GameGroup
-          key={group.title}
-          title={group.title}
-          cover={group.cover}
-          items={group.items}
-          gettingLinks={
-            autoDownload?.gameTitle === group.title ? gettingLinks : null
-          }
+          key={g.key}
+          title={g.title}
+          cover={g.cover}
+          phase={g.phase}
+          rows={g.rows}
         />
       ))}
       {loose.map((item) => (

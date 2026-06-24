@@ -5,6 +5,16 @@ import type { Settings } from "@/lib/settings";
 
 export type Part = { url: string; checked: boolean };
 
+/// A game queued for "extract links + download": the selected part page URLs and
+/// the metadata to attach to its download jobs. One extracts at a time (single
+/// WebView); the rest wait in `extractionQueue`.
+export type GameJob = {
+  url: string;
+  gameTitle: string;
+  gameCover: string;
+  partUrls: string[];
+};
+
 /// Cached extraction state for one game URL (session-scoped; survives navigation,
 /// cleared on app restart or via Settings → Clear link cache).
 export type CacheEntry = {
@@ -35,11 +45,11 @@ type AppState = {
   results: Record<string, ExtractProgress>;
   /// Resolved extraction state per game URL, reused across navigation.
   extractionCache: Record<string, CacheEntry>;
-  /// The game whose resolved links should auto-queue as downloads (set by the
-  /// "Get links & download" flow). Carries its own metadata so links keep the
-  /// right game even if the user browses to another game mid-extraction. Null
-  /// disables auto-download.
-  autoDownload: { url: string; gameTitle: string; gameCover: string } | null;
+  /// The game currently extracting links; its resolved links auto-queue as
+  /// downloads with this metadata. Null when nothing is extracting.
+  activeJob: GameJob | null;
+  /// Games selected for download, waiting their turn to extract (FIFO).
+  extractionQueue: GameJob[];
   downloadDir: string | null;
   downloads: Record<string, DownloadItem>;
   settings: Settings | null;
@@ -54,6 +64,8 @@ type AppState = {
   setCancelled: (cancelled: boolean) => void;
   setParts: (parts: Part[]) => void;
   togglePart: (index: number) => void;
+  /// Check or uncheck every part (Select all / none).
+  setAllChecked: (checked: boolean) => void;
   /// Gmail-style select: a plain click toggles `index` and sets the anchor; with
   /// `extend` (Shift) every part between the anchor and `index` takes the
   /// anchor's checked state.
@@ -61,9 +73,12 @@ type AppState = {
   mergeResult: (p: ExtractProgress) => void;
   /// Replace the active parts+results (used to hydrate from the cache).
   loadExtraction: (parts: Part[], results: Record<string, ExtractProgress>) => void;
-  setAutoDownload: (
-    g: { url: string; gameTitle: string; gameCover: string } | null
-  ) => void;
+  /// Append a game to the extraction queue (does not start it).
+  enqueueJob: (job: GameJob) => void;
+  /// Move the head of the queue into `activeJob` and return it (null if empty).
+  startNextJob: () => GameJob | null;
+  /// Clear the active job (extraction finished).
+  finishActiveJob: () => void;
   clearExtractionCache: () => void;
   setDownloadDir: (dir: string | null) => void;
   mergeDownload: (item: DownloadItem) => void;
@@ -75,7 +90,7 @@ type AppState = {
   resetExtraction: () => void;
 };
 
-export const useAppStore = create<AppState>((set) => ({
+export const useAppStore = create<AppState>((set, get) => ({
   url: "https://fitgirl-repacks.site/grand-theft-auto-v/",
   gameTitle: "",
   gameCover: "",
@@ -85,7 +100,8 @@ export const useAppStore = create<AppState>((set) => ({
   parts: [],
   results: {},
   extractionCache: {},
-  autoDownload: null,
+  activeJob: null,
+  extractionQueue: [],
   downloadDir: null,
   downloads: {},
   settings: null,
@@ -103,7 +119,7 @@ export const useAppStore = create<AppState>((set) => ({
       selectionAnchor: null,
       extractionCache: {
         ...s.extractionCache,
-        [s.autoDownload?.url ?? s.url]: { parts, results: {} },
+        [s.activeJob?.url ?? s.url]: { parts, results: {} },
       },
     })),
   togglePart: (index) =>
@@ -112,6 +128,8 @@ export const useAppStore = create<AppState>((set) => ({
         i === index ? { ...p, checked: !p.checked } : p
       ),
     })),
+  setAllChecked: (checked) =>
+    set((s) => ({ parts: s.parts.map((p) => ({ ...p, checked })) })),
   selectPart: (index, extend) =>
     set((s) => {
       const anchor = s.selectionAnchor;
@@ -135,7 +153,7 @@ export const useAppStore = create<AppState>((set) => ({
   mergeResult: (p) =>
     set((s) => {
       const results = { ...s.results, [p.sourceUrl]: p };
-      const key = s.autoDownload?.url ?? s.url;
+      const key = s.activeJob?.url ?? s.url;
       const cached = s.extractionCache[key];
       if (!cached) return { results };
       // Accumulate into the cache independently of the active results (which a
@@ -152,7 +170,16 @@ export const useAppStore = create<AppState>((set) => ({
       };
     }),
   loadExtraction: (parts, results) => set({ parts, results, selectionAnchor: null }),
-  setAutoDownload: (autoDownload) => set({ autoDownload }),
+  enqueueJob: (job) =>
+    set((s) => ({ extractionQueue: [...s.extractionQueue, job] })),
+  startNextJob: () => {
+    const queue = get().extractionQueue;
+    const next = queue[0];
+    if (!next) return null;
+    set({ activeJob: next, extractionQueue: queue.slice(1) });
+    return next;
+  },
+  finishActiveJob: () => set({ activeJob: null }),
   clearExtractionCache: () => set({ extractionCache: {} }),
   setDownloadDir: (downloadDir) => set({ downloadDir }),
   mergeDownload: (item) =>

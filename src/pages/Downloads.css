@@ -31,6 +31,15 @@
 .game-group-rows {
   @apply space-y-2 pl-2 border-l border-border;
 }
+.pending-row {
+  @apply flex items-center justify-between gap-2 text-xs text-muted-foreground border border-dashed border-border rounded-md px-3 py-2;
+}
+.pending-name {
+  @apply font-mono truncate;
+}
+.pending-status {
+  @apply shrink-0 italic;
+}
 .dl-row {
   @apply border border-border rounded-md p-3 space-y-2;
 }
