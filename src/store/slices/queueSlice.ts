@@ -1,4 +1,5 @@
 import type { StateCreator } from "zustand";
+import { filenameFromUrl } from "@/lib/format";
 import type { AppStore, GameJob, JobStatus } from "../types";
 
 /// The per-game extraction queue (submitted games, one extracting at a time).
@@ -10,6 +11,10 @@ export type QueueSlice = {
   enqueueJob: (job: GameJob) => void;
   setJobStatus: (url: string, status: JobStatus) => void;
   removeJob: (url: string) => void;
+  /// Drop finished game cards that no longer have any download (e.g. all
+  /// removed). Queued/extracting jobs are kept — their downloads may still be
+  /// forming. Call only after an explicit removal, never on status changes.
+  pruneEmptyJobs: () => void;
 };
 
 export const createQueueSlice: StateCreator<AppStore, [], [], QueueSlice> = (
@@ -28,4 +33,15 @@ export const createQueueSlice: StateCreator<AppStore, [], [], QueueSlice> = (
     })),
   removeJob: (url) =>
     set((s) => ({ gameJobs: s.gameJobs.filter((j) => j.url !== url) })),
+  pruneEmptyJobs: () =>
+    set((s) => {
+      const names = new Set(Object.values(s.downloads).map((d) => d.filename));
+      return {
+        gameJobs: s.gameJobs.filter(
+          (j) =>
+            j.status !== "done" ||
+            j.partUrls.some((u) => names.has(filenameFromUrl(u)))
+        ),
+      };
+    }),
 });

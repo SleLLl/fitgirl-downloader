@@ -1,4 +1,3 @@
-import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   clearFinished,
@@ -36,18 +35,7 @@ export default function Downloads() {
 
   const items = Object.values(downloads);
   const byFilename = new Map(items.map((i) => [i.filename, i]));
-
-  // Prune finished game cards whose downloads are all gone (e.g. cancelled +
-  // removed), so they don't linger as rows of placeholders.
-  useEffect(() => {
-    const store = useAppStore.getState();
-    const names = new Set(Object.values(store.downloads).map((d) => d.filename));
-    for (const job of store.gameJobs) {
-      if (job.status !== "done") continue;
-      const hasDownload = job.partUrls.some((u) => names.has(filenameFromUrl(u)));
-      if (!hasDownload) store.removeJob(job.url);
-    }
-  }, [gameJobs, downloads]);
+  const pruneEmptyJobs = useAppStore((s) => s.pruneEmptyJobs);
 
   const resumableCount = items.filter((i) =>
     RESUMABLE_STATUSES.includes(i.status)
@@ -147,8 +135,7 @@ export default function Downloads() {
   const handleClearFinished = () => {
     void clearFinished();
     dropFinished();
-    // Fully-finished game cards are pruned by the effect above once their
-    // downloads are gone.
+    pruneEmptyJobs();
   };
 
   return (

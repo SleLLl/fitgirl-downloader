@@ -26,6 +26,7 @@ function statusClass(status: string): string {
 
 export function DownloadRow({ item }: { item: DownloadItem }) {
   const dropDownload = useAppStore((s) => s.dropDownload);
+  const pruneEmptyJobs = useAppStore((s) => s.pruneEmptyJobs);
   const percent =
     item.totalBytes > 0
       ? Math.floor((item.downloadedBytes / item.totalBytes) * 100)
@@ -45,6 +46,7 @@ export function DownloadRow({ item }: { item: DownloadItem }) {
   const handleRemove = () => {
     void removeDownload(item.id);
     dropDownload(item.id);
+    pruneEmptyJobs();
   };
 
   return (
