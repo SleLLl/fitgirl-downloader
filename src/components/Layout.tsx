@@ -1,3 +1,5 @@
+import { useEffect } from "react";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { Link, Outlet, useRouterState } from "@tanstack/react-router";
 import {
   Download,
@@ -53,6 +55,13 @@ export function Layout() {
   const setTheme = useAppStore((s) => s.setTheme);
   const isDark = theme === "dark";
   const toggleTheme = () => setTheme(isDark ? "light" : "dark");
+
+  // Match the native window chrome (title bar, close button) to the app theme.
+  useEffect(() => {
+    void getCurrentWindow()
+      .setTheme(theme)
+      .catch(() => {});
+  }, [theme]);
 
   return (
     <main className={isDark ? "app-shell dark" : "app-shell"}>
