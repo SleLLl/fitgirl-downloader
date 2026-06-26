@@ -1,6 +1,6 @@
 [package]
 name = "fitgirl-downloader"
-version = "0.1.0"
+version = "0.2.0"
 description = "Browse, extract and download FitGirl repacks with a built-in multi-connection download manager."
 authors = ["Sergei Kolyago"]
 edition = "2021"
