@@ -76,6 +76,21 @@ npm test        # frontend (vitest)
 cargo test      # backend (run inside src-tauri/)
 ```
 
+## Releasing
+
+Releases are automated with [release-please](https://github.com/googleapis/release-please-action), driven by [Conventional Commits](https://www.conventionalcommits.org/) (`feat:`, `fix:`, `feat!:` / `BREAKING CHANGE`).
+
+1. Push normal commits to `main`. A bot keeps a **"chore: release X.Y.Z" pull request** open, bumping the version (`package.json`, `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml`) and updating `CHANGELOG.md`.
+2. **Merge that PR** when you want to ship. It tags `vX.Y.Z` and creates the GitHub Release.
+3. The workflow then builds the signed Windows installer and uploads it plus `latest.json` (consumed by the in-app updater) to the release.
+
+Version bumps follow the commit types: `fix:` → patch, `feat:` → minor, breaking changes → major.
+
+**One-time repo setup:**
+
+- Settings → Actions → General → Workflow permissions: enable **Read and write permissions** and **Allow GitHub Actions to create and approve pull requests** (so release-please can open its PR).
+- Add the updater signing secrets (Settings → Secrets and variables → Actions): `TAURI_SIGNING_PRIVATE_KEY` and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`.
+
 ## License
 
 Source code is released under the MIT License (see [LICENSE](LICENSE)). This license covers **only this application's code** — it grants no rights to any third-party content the tool may be used to access.
