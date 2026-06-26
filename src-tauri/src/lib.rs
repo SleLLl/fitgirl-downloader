@@ -55,10 +55,7 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_notification::init())
-        // NOTE: the updater plugin panics at startup unless `plugins.updater`
-        // (endpoints + pubkey) exists in tauri.conf.json. Re-enable this line
-        // TOGETHER with adding that config block (needs the real pubkey):
-        // .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(extractor::ExtractorState::default())
         .setup(|app| {
             // Open the local SQLite DB in the app-data dir; fall back to an
