@@ -50,8 +50,25 @@ export function useAppEvents() {
     const unDownload = onDownloadProgress((item) => {
       const prev = useAppStore.getState().downloads[item.id]?.status;
       mergeDownload(item);
-      if (item.status === "done" && prev !== "done") {
+      if (item.status !== "done" || prev === "done") return;
+      const st = useAppStore.getState();
+      // Standalone (manual) download: notify per file as before.
+      if (!item.gameTitle) {
         void notifyDownloadDone(item.filename);
+        return;
+      }
+      // Game with many parts: notify once, when the whole game has finished —
+      // its job is done extracting and no part is still downloading/queued.
+      const job = st.gameJobs.find((j) => j.gameTitle === item.gameTitle);
+      const extractionDone = job ? job.status === "done" : true;
+      const siblings = Object.values(st.downloads).filter(
+        (d) => d.gameTitle === item.gameTitle
+      );
+      const stillRunning = siblings.some((d) =>
+        ["downloading", "queued"].includes(d.status)
+      );
+      if (extractionDone && !stillRunning) {
+        void notifyDownloadDone(item.gameTitle);
       }
     });
     return () => {
