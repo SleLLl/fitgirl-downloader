@@ -2,6 +2,10 @@
   <img src="src-tauri/icons/128x128.png" width="96" height="96" alt="FitGirl Downloader icon" />
   <h1>FitGirl Downloader</h1>
   <p>A small desktop app that automates browsing, link extraction and multi-connection downloading of repacks from the public FitGirl Repacks catalog.</p>
+  <p>
+    <a href="https://github.com/SleLLl/fitgirl-downloader/releases/latest"><img src="https://img.shields.io/github/v/release/SleLLl/fitgirl-downloader?label=download&color=4f46e5" alt="Download latest release" /></a>
+    <a href="https://github.com/SleLLl/fitgirl-downloader/releases"><img src="https://img.shields.io/github/downloads/SleLLl/fitgirl-downloader/total?color=4f46e5" alt="Total downloads" /></a>
+  </p>
 </div>
 
 ---
@@ -25,6 +29,12 @@ FitGirl Downloader replaces a manual workflow (browser + a separate download man
 3. **Download** — a built-in multi-connection, resumable download engine fetches the parts, so you don't need IDM/JDownloader.
 
 Completed games are grouped in a **Library**, and the queue survives app restarts.
+
+## Download
+
+Get the latest Windows installer from the [**latest release**](https://github.com/SleLLl/fitgirl-downloader/releases/latest) — download the `*-setup.exe` asset and run it. The app then keeps itself up to date automatically via the built-in updater.
+
+> On first launch Windows SmartScreen may warn about an "unrecognized app" (the build isn't code-signed yet) — click **More info → Run anyway**.
 
 ## Screenshots
 
