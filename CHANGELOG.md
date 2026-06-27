@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.1](https://github.com/SleLLl/fitgirl-downloader/compare/v0.2.0...v0.2.1) (2026-06-27)
+
+
+### Bug Fixes
+
+* correct tauri npm script so CI builds instead of running dev ([fee64c7](https://github.com/SleLLl/fitgirl-downloader/commit/fee64c7896c1dbcbc8e7af01fa761e1808865d12))
+
 ## [0.2.0](https://github.com/SleLLl/fitgirl-downloader/compare/v0.1.0...v0.2.0) (2026-06-26)
 
 
