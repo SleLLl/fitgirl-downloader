@@ -26,6 +26,12 @@ FitGirl Downloader replaces a manual workflow (browser + a separate download man
 
 Completed games are grouped in a **Library**, and the queue survives app restarts.
 
+## Screenshots
+
+| Browse (light) | Game detail (dark) |
+| --- | --- |
+| ![Browsing the catalog](docs/screenshots/browse.png) | ![Game detail page](docs/screenshots/game-detail.png) |
+
 ## Features
 
 - Catalog **browse** (popular) and **search** with genre/tag filters
