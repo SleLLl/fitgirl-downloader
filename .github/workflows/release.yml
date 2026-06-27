@@ -34,11 +34,14 @@ jobs:
     needs: release-please
     if: ${{ needs.release-please.outputs.release_created == 'true' }}
     runs-on: windows-latest
+    # Fail fast instead of burning the 6h default if a step hangs (e.g. the
+    # updater signer waiting on a missing key password).
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
       - uses: dtolnay/rust-toolchain@stable
       - name: Install frontend deps
         run: npm ci
@@ -47,6 +50,10 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          # Must match the password set during `tauri signer generate` (empty
+          # string if the key has no password) — otherwise signing hangs on a
+          # password prompt.
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           releaseId: ${{ needs.release-please.outputs.release_id }}
+          args: --verbose
