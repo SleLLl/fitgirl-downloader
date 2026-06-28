@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.0](https://github.com/SleLLl/fitgirl-downloader/compare/v0.2.1...v0.3.0) (2026-06-28)
+
+
+### Features
+
+* close to tray only while downloading, else quit ([1df93a5](https://github.com/SleLLl/fitgirl-downloader/commit/1df93a5858db1ee5e1906b8a4bc5c5b480d618bc))
+* one completion notification per game, not per part ([b85da9d](https://github.com/SleLLl/fitgirl-downloader/commit/b85da9d866e4185f5dbcb60b009700aadf64bc1b))
+
 ## [0.2.1](https://github.com/SleLLl/fitgirl-downloader/compare/v0.2.0...v0.2.1) (2026-06-27)
 
 
