@@ -199,6 +199,16 @@ impl DownloadManager {
         }
     }
 
+    /// True if any download is actively in progress (downloading or queued).
+    /// Paused jobs don't count — they survive a restart via the DB.
+    pub fn has_active_downloads(&self) -> bool {
+        self.items
+            .lock()
+            .unwrap()
+            .values()
+            .any(|s| matches!(s.status.lock().unwrap().as_str(), "downloading" | "queued"))
+    }
+
     /// Re-queue a paused/failed download: mark it `queued` (so the UI shows it is
     /// waiting for a concurrency slot rather than still paused) and respawn it.
     /// When `file_concurrency` is already saturated the task blocks on the

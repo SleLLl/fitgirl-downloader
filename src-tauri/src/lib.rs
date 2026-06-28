@@ -69,11 +69,17 @@ pub fn run() {
             Ok(())
         })
         .on_window_event(|window, event| {
-            // Closing the window hides it to the tray instead of quitting; the
-            // tray's Quit (app.exit) is the real exit.
+            // Closing the window hides it to the tray while downloads are active
+            // (so they keep running); with nothing downloading, it really quits.
+            // The tray's Quit always exits.
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
-                api.prevent_close();
-                let _ = window.hide();
+                if window
+                    .state::<downloader::DownloadManager>()
+                    .has_active_downloads()
+                {
+                    api.prevent_close();
+                    let _ = window.hide();
+                }
             }
         })
         .invoke_handler(tauri::generate_handler![
